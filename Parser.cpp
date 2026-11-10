@@ -36,6 +36,12 @@ void Parser::parseFactor() {
 			expect(TokenType::RParen, "Ожидалась )!");
 			target_bytecode->push_back("CALL " + id_name.text);
 		}
+		else if (current().type == TokenType::LBracket) {
+			advance();
+			parseOr();
+			expect(TokenType::RBracket, "Ожидалась ]!");
+			target_bytecode->push_back("LOAD_INDEX " + id_name.text);
+		}
 		else target_bytecode->push_back("LOAD " + id_name.text);
 	}
 	else if (current().type == TokenType::LParen) {
@@ -217,6 +223,58 @@ void Parser::parseStatement() {
 		expect(TokenType::Semicolon, "Ожидалась точка с запятой!");
 
 		target_bytecode->push_back("STORE " + id_name.text);
+	}
+	else if (current().type == TokenType::Identifier && pos + 4 < token_vec.size()
+		&& token_vec[pos + 1].type == TokenType::LBracket
+		&& (token_vec[pos + 2].type == TokenType::Number
+		|| token_vec[pos + 2].type == TokenType::Identifier)
+		&& token_vec[pos + 3].type == TokenType::RBracket
+		&& token_vec[pos + 4].type == TokenType::Semicolon) {
+
+		Token id_name = current();
+		advance();
+		advance();
+		std::string size_of_arr = current().text;
+
+		advance();
+		advance();
+		expect(TokenType::Semicolon, "Ожидалась точка с запятой!");
+
+		target_bytecode->push_back("ALLOC " + id_name.text + ' ' + size_of_arr);
+	}
+	else if (current().type == TokenType::Identifier && pos + 1 < token_vec.size()
+		&& token_vec[pos + 1].type == TokenType::LBracket) {
+
+		size_t rollback_pos = pos;
+		std::vector<std::string>* copy_ptr = target_bytecode;
+		std::vector<std::string> check_vector;
+		target_bytecode = &check_vector;
+
+		Token id_name = current();
+		advance();
+		advance();
+
+		parseOr();
+
+		expect(TokenType::RBracket, "Ожидалась ]!");
+
+		target_bytecode = copy_ptr;
+		if (current().type == TokenType::Assign) {
+			target_bytecode->insert(target_bytecode->end(),check_vector.begin(),check_vector.end());
+
+			advance();
+			parseOr();
+			expect(TokenType::Semicolon, "Ожидалась точка с запятой!");
+
+			target_bytecode->push_back("SWAP");
+			target_bytecode->push_back("STORE_INDEX " + id_name.text);
+		}
+		else {
+			pos = rollback_pos;
+			parseOr();
+			expect(TokenType::Semicolon, "Ожидалась точка с запятой!");
+			target_bytecode->push_back("POP");
+		}
 	}
 	else {
 		parseOr();

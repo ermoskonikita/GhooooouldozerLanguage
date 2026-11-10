@@ -62,16 +62,18 @@ std::vector<uint8_t> Assembler::Compile() {
 
 	for (size_t i = 0; i < size; i++) {
 		const std::string& str = op_vector[i];
-		if (str == "PUSH" || str == "JMP" || str == "JZ" || str == "JNZ" || str == "CALL") {
+		if (str == "PUSH" || str == "JMP" || str == "JZ" || str == "JNZ" || str == "CALL" ) {
 			position += 5;
 			i++;
 		}
+		else if (str == "ALLOC") i += 2;
 		else if (str == "LOAD" || str == "STORE") { position += 6; i++; }
+		else if(str == "LOAD_INDEX" || str == "STORE_INDEX") { position += 7; i++; }
 		else if (str == "POP" || str == "DUP" || str == "ADD" ||
 			str == "SUB" || str == "MUL" || str == "DIV" || str == "BAND" || str == "BOR" ||
 			str == "BXOR" || str == "BNOT" || str == "LT" ||str == "LE"  || str == "GT" ||
 			str == "GE" || str == "EQ" || str == "NE" || str == "AND" || str == "OR" ||
-			str == "NOT" || str == "PRINT" || str == "RET" ||
+			str == "NOT" || str == "PRINT" || str == "RET" || str == "SWAP" ||
 			str == "HALT") position++;
 		else if (op_vector[i].back() == ':') {
 			std::string c{ op_vector[i].begin(),op_vector[i].end() - 1 };
@@ -167,6 +169,37 @@ std::vector<uint8_t> Assembler::Compile() {
 
 			position += 6;
 		}
+		else if (str == "ALLOC") {
+			if (++i == size) return {};
+			if (auto it = variables.find(op_vector[i]); it == variables.end()) {
+				variables.emplace(op_vector[i], next_var_address);
+				if (++i == size) return {};
+				try {
+					int32_t size_of_arr = std::stoi(op_vector[i]);
+					if (size_of_arr > 1024 - static_cast<int64_t>(next_var_address) ||
+						size_of_arr < 1) return {};
+					next_var_address += size_of_arr;
+				}
+				catch (...) { return {}; }
+			}
+			else return {};
+		}
+		else if (str == "LOAD_INDEX" || str == "STORE_INDEX") {
+			if (++i == size) return {};
+
+			bytecode.push_back(static_cast<uint8_t>(OpCode::PUSH));
+			if (auto it = variables.find(op_vector[i]); it != variables.end()) {
+				PushMemoryArg(bytecode, it->second);
+			}
+			else return {};
+			bytecode.push_back(static_cast<uint8_t>(OpCode::ADD));
+
+			if (str == "LOAD_INDEX") bytecode.push_back(static_cast<uint8_t>(OpCode::LOAD));
+			else bytecode.push_back(static_cast<uint8_t>(OpCode::STORE));
+
+			position += 7;
+		}
+		else if(str == "SWAP") { bytecode.push_back(static_cast<uint8_t>(OpCode::SWAP)); position++; }
 		else if (str == "CALL") {
 			if (++i == size) return {};
 			bytecode.push_back(static_cast<uint8_t>(OpCode::CALL));

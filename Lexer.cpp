@@ -110,6 +110,8 @@ Token Lexer::GetNextToken() {
 		case '~':t.type = TokenType::BNot; break;
 		case '(':t.type = TokenType::LParen; break;
 		case ')':t.type = TokenType::RParen; break;
+		case '[':t.type = TokenType::LBracket; break;
+		case ']':t.type = TokenType::RBracket; break;
 		case '{':t.type = TokenType::LBrace; break;
 		case '}':t.type = TokenType::RBrace; break;
 		case ';':t.type = TokenType::Semicolon; break;

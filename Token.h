@@ -10,6 +10,7 @@ enum class TokenType {
 	And,Or,Not,
 	BAnd,BOr,BXor,BNot,
 	LParen,RParen,
+	LBracket,RBracket,
 	LBrace,RBrace,
 	Semicolon,
 	Print,

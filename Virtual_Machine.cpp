@@ -331,6 +331,13 @@ void Virtual_Machine::run() {
 			ip = call_stack.back();
 			call_stack.pop_back();
 			break;
+		case OpCode::SWAP:
+			if (stack.size() < 2) {
+				running = false;
+				break;
+			}
+			std::swap(stack.back(), *(stack.end() - 2));
+			break;
 		case OpCode::HALT:
 			running = false;
 			break;

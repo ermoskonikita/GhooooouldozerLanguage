@@ -30,5 +30,6 @@ enum class OpCode : uint8_t {
 	STORE = 0x1A,
 	CALL = 0x1B,
 	RET = 0x1C,
+	SWAP = 0x1D,
 	HALT = 0xFF
 };
