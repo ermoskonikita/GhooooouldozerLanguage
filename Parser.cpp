@@ -157,9 +157,21 @@ void Parser::parseOr() {
 void Parser::parseStatement() {
 	if (current().type == TokenType::Print) {
 		advance();
-		parseOr();
-		expect(TokenType::Semicolon, "Ожидалась точка с запятой!");
-		target_bytecode->push_back("PRINT");
+
+		Token print_expr = current();
+		if (print_expr.type == TokenType::String) {
+			for (unsigned char sym : print_expr.text) {
+				target_bytecode->push_back("PUSH " + std::to_string(sym));
+				target_bytecode->push_back("PRINT_CHAR");
+			}
+			advance();
+			expect(TokenType::Semicolon, "Ожидалась точка с запятой!");
+		}
+		else {
+			parseOr();
+			expect(TokenType::Semicolon, "Ожидалась точка с запятой!");
+			target_bytecode->push_back("PRINT");
+		}
 	}
 	else if (current().type == TokenType::Return) {
 		advance();

@@ -276,6 +276,15 @@ void Virtual_Machine::run() {
 			std::cout << stack.back() << '\n';
 			stack.pop_back();
 			break;
+		case OpCode::PRINT_CHAR:
+			if (stack.empty()) {
+				running = false;
+				break;
+			}
+
+			std::cout << static_cast<unsigned char>(stack.back());
+			stack.pop_back();
+			break;
 		case OpCode::LOAD:
 		{
 			if (stack.empty()) {

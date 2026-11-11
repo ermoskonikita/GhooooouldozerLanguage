@@ -73,8 +73,8 @@ std::vector<uint8_t> Assembler::Compile() {
 			str == "SUB" || str == "MUL" || str == "DIV" || str == "BAND" || str == "BOR" ||
 			str == "BXOR" || str == "BNOT" || str == "LT" ||str == "LE"  || str == "GT" ||
 			str == "GE" || str == "EQ" || str == "NE" || str == "AND" || str == "OR" ||
-			str == "NOT" || str == "PRINT" || str == "RET" || str == "SWAP" ||
-			str == "HALT") position++;
+			str == "NOT" || str == "PRINT" || str == "PRINT_CHAR" || str == "RET" ||
+			str == "SWAP" || str == "HALT") position++;
 		else if (op_vector[i].back() == ':') {
 			std::string c{ op_vector[i].begin(),op_vector[i].end() - 1 };
 			if (cases.count(c)) return {};
@@ -150,6 +150,7 @@ std::vector<uint8_t> Assembler::Compile() {
 			position += 5;
 		}
 		else if (str == "PRINT") { bytecode.push_back(static_cast<uint8_t>(OpCode::PRINT)); position++; }
+		else if (str == "PRINT_CHAR") { bytecode.push_back(static_cast<uint8_t>(OpCode::PRINT_CHAR)); position++; }
 		else if (str == "LOAD" || str == "STORE") {
 			bytecode.push_back(static_cast<uint8_t>(OpCode::PUSH));
 			if (++i == size) return {};
