@@ -35,13 +35,45 @@ Token Lexer::GetNextToken() {
 	}
 
 	if (std::isdigit(this->src[pos])) {
-		while (pos < src.size() && std::isdigit(this->src[pos])) t.text += src[pos++];
+		size_t start_pos = pos;
+		while (pos < src.size() && std::isdigit(this->src[pos])) pos++;
+
+		t.text = src.substr(start_pos, pos - start_pos);
 		t.type = TokenType::Number;
 	}
 	else if (std::isalpha(this->src[pos])) {
-		while (pos < src.size() && (std::isalnum(this->src[pos]) || this->src[pos] == '_')) t.text += src[pos++];
+		size_t start_pos = pos;
+		while (pos < src.size() && (std::isalnum(this->src[pos]) || this->src[pos] == '_')) pos++; 
+		t.text = src.substr(start_pos, pos - start_pos);
+
 		if (auto it = keywords.find(t.text);it != keywords.end()) t.type = it->second;
 		else t.type = TokenType::Identifier;
+	}
+	else if (this->src[pos] == '"') {
+		pos++;
+		size_t start_pos = pos;
+		while (pos < src.size() && this->src[pos] != '"') {
+			if (src[pos] == '\\' && pos + 1 < src.size() 
+				&& (src[pos + 1] == 'n' || src[pos + 1] == 't')) {
+
+				char c = src[pos + 1];
+				t.text += src.substr(start_pos, pos - start_pos);
+
+				if (c == 'n') t.text.push_back('\n');
+				else t.text.push_back('\t');
+
+				pos += 2;
+				start_pos = pos;
+			}
+			else pos++;
+		}
+
+		t.text += src.substr(start_pos, pos - start_pos);
+
+		if (pos == src.size()) throw std::runtime_error(std::string("Отсутствуют кавычки!"));
+		else pos++;
+
+		t.type = TokenType::String;
 	}
 	else {
 		char current = this->src[pos++];
