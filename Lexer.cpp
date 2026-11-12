@@ -79,8 +79,31 @@ Token Lexer::GetNextToken() {
 		char current = this->src[pos++];
 		t.text += current;
 		switch (current) {
-		case '+':t.type = TokenType::Plus; break;
-		case '-':t.type = TokenType::Minus; break;
+		case '+': {
+			if (pos < src.size() && src[pos] == '+') {
+				pos++;
+				t.text.push_back('+');
+				t.type = TokenType::PlusPlus;
+			}
+			else if (pos < src.size() && src[pos] == '=') {
+				pos++;
+				t.text.push_back('=');
+				t.type = TokenType::PlusAssign;
+			}
+			else {
+				t.type = TokenType::Plus;
+			}
+			break;
+		}
+		case '-': {
+			if (pos < src.size() && src[pos] == '-') {
+				pos++;
+				t.text.push_back('-');
+				t.type = TokenType::MinusMinus;
+			}
+			else t.type = TokenType::Minus;
+			break;
+		}
 		case '*':t.type = TokenType::Star; break;
 		case '/':t.type = TokenType::Slash; break;
 		case '=': {

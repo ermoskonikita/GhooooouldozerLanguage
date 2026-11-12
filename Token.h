@@ -4,7 +4,8 @@
 enum class TokenType {
 	Number,
 	Plus,Minus,Star,Slash,
-	Assign,
+	PlusPlus,MinusMinus,
+	Assign,PlusAssign,
 	Less, Greater, Equal,
 	LessEqual, GreaterEqual, NotEqual,
 	And,Or,Not,

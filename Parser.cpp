@@ -23,6 +23,47 @@ void Parser::parseFactor() {
 		parseFactor();
 		target_bytecode->push_back("BNOT");
 	}
+	else if (current().type == TokenType::PlusPlus) {
+		if (pos + 2 < token_vec.size() && token_vec[pos + 1].type == TokenType::Identifier
+			&& token_vec[pos + 2].type != TokenType::LParen) {
+			advance();
+
+			Token id_name = current();
+			advance();
+			if (current().type != TokenType::LBracket) {
+				target_bytecode->push_back("LOAD " + id_name.text);
+				target_bytecode->push_back("PUSH 1");
+				target_bytecode->push_back("ADD");
+				target_bytecode->push_back("DUP");
+				target_bytecode->push_back("STORE " + id_name.text);
+			}
+			else {
+				advance();
+
+				size_t start_size = target_bytecode->size();
+				parseOr();
+				size_t end_size = target_bytecode->size();
+
+				expect(TokenType::RBracket, "Ожидалась ]!");
+				target_bytecode->push_back("LOAD_INDEX " + id_name.text);
+				target_bytecode->push_back("PUSH 1");
+				target_bytecode->push_back("ADD");
+				target_bytecode->push_back("DUP");
+
+				target_bytecode->insert(target_bytecode->end(),
+					target_bytecode->begin() + start_size,
+					target_bytecode->begin() + end_size);
+				target_bytecode->push_back("STORE_INDEX " + id_name.text);
+			}
+		}
+		else if (pos + 2 >= token_vec.size()) throw std::runtime_error("Отсутствует выражение или ;!");
+		else {
+			advance();
+			parseFactor();
+			target_bytecode->push_back("PUSH 1");
+			target_bytecode->push_back("ADD");
+		}
+	}
 	else if (current().type == TokenType::Number) {
 		target_bytecode->push_back("PUSH " + current().text);
 		advance();
@@ -38,9 +79,35 @@ void Parser::parseFactor() {
 		}
 		else if (current().type == TokenType::LBracket) {
 			advance();
+
+			size_t start_size = target_bytecode->size();
 			parseOr();
+
 			expect(TokenType::RBracket, "Ожидалась ]!");
-			target_bytecode->push_back("LOAD_INDEX " + id_name.text);
+			if (current().type == TokenType::PlusPlus) {
+				advance();
+				size_t end_size = target_bytecode->size();
+
+				target_bytecode->push_back("LOAD_INDEX " + id_name.text);
+				target_bytecode->push_back("DUP");
+				target_bytecode->push_back("PUSH 1");
+				target_bytecode->push_back("ADD");
+
+				target_bytecode->insert(target_bytecode->end(),
+					target_bytecode->begin() + start_size,
+					target_bytecode->begin() + end_size);
+
+				target_bytecode->push_back("STORE_INDEX " + id_name.text);
+			}
+			else target_bytecode->push_back("LOAD_INDEX " + id_name.text);
+		}
+		else if (current().type == TokenType::PlusPlus) {
+			advance();
+			target_bytecode->push_back("LOAD " + id_name.text);
+			target_bytecode->push_back("DUP");
+			target_bytecode->push_back("PUSH 1");
+			target_bytecode->push_back("ADD");
+			target_bytecode->push_back("STORE " + id_name.text);
 		}
 		else target_bytecode->push_back("LOAD " + id_name.text);
 	}

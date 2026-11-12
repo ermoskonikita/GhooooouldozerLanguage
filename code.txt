@@ -1,19 +1,38 @@
-// Тест вывода строк и работы с массивами
-print "=== START TEST ===\n";
+// 1. Тест обычных переменных в выражениях
+print "--- Scalar Expressions ---\n";
+a = 5;
+b = a++; 
+c = ++a; 
 
-// Объявляем массив
-arr[5];
+print "b (expected 5) = "; print b; print "\n";
+print "c (expected 7) = "; print c; print "\n";
+print "a (expected 7) = "; print a; print "\n";
+
+// 2. Тест самостоятельных инструкций (проверка POP)
+print "--- Scalar Statements ---\n";
+a++;
+++a;
+print "a (expected 9) = "; print a; print "\n";
+
+// 3. Тест инкремента элементов массива в выражениях
+print "--- Array Expressions ---\n";
+arr[3]; 
 arr[0] = 10;
 arr[1] = 20;
 
-// Сложный индекс
-idx = 1;
-arr[idx + 1] = arr[0] + arr[1]; // arr[2] = 30
+x = arr[0]++; 
+y = ++arr[1]; 
 
-print "Element 0: ";
-print arr[0];
+print "x (expected 10) = "; print x; print "\n";
+print "arr[0] (expected 11) = "; print arr[0]; print "\n";
 
-print "Element 2: ";
-print arr[2];
+print "y (expected 21) = "; print y; print "\n";
+print "arr[1] (expected 21) = "; print arr[1]; print "\n";
 
-print "=== ALL DONE ==-\n";
+// 4. Тест инкремента массива как самостоятельной инструкции
+print "--- Array Statements ---\n";
+arr[0]++;
+++arr[1];
+
+print "arr[0] (expected 12) = "; print arr[0]; print "\n";
+print "arr[1] (expected 22) = "; print arr[1]; print "\n";
