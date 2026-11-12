@@ -29,8 +29,11 @@ enum class OpCode : uint8_t {
 	PRINT_CHAR = 0x19,
 	LOAD = 0x1A,
 	STORE = 0x1B,
-	CALL = 0x1C,
-	RET = 0x1D,
-	SWAP = 0x1E,
+	LOAD_INDEX = 0x1C,
+	STORE_INDEX = 0x1D,
+	ALLOC = 0x1E,
+	CALL = 0x1F,
+	RET = 0x20,
+	SWAP = 0x21,
 	HALT = 0xFF
 };

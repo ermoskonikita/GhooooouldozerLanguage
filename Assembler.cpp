@@ -19,13 +19,6 @@ void Assembler::PushArg(std::vector<uint8_t>& bytecode, size_t& i) {
 	}
 }
 
-void Assembler::PushMemoryArg(std::vector<uint8_t>& bytecode, uint32_t adr) {
-	for (int k = 0; k <= 3; k++) {
-		bytecode.push_back(static_cast<uint8_t>(adr));
-		adr >>= 8;
-	}
-}
-
 Assembler::Assembler(const std::string& str) {
 	std::ifstream file(str);
 	if (!file.is_open()) throw std::runtime_error("Не удалось открыть файл: " + str);
@@ -66,15 +59,13 @@ std::vector<uint8_t> Assembler::Compile() {
 			position += 5;
 			i++;
 		}
-		else if (str == "ALLOC") i += 2;
-		else if (str == "LOAD" || str == "STORE") { position += 6; i++; }
-		else if(str == "LOAD_INDEX" || str == "STORE_INDEX") { position += 7; i++; }
 		else if (str == "POP" || str == "DUP" || str == "ADD" ||
 			str == "SUB" || str == "MUL" || str == "DIV" || str == "BAND" || str == "BOR" ||
 			str == "BXOR" || str == "BNOT" || str == "LT" ||str == "LE"  || str == "GT" ||
 			str == "GE" || str == "EQ" || str == "NE" || str == "AND" || str == "OR" ||
 			str == "NOT" || str == "PRINT" || str == "PRINT_CHAR" || str == "RET" ||
-			str == "SWAP" || str == "HALT") position++;
+			str == "LOAD" || str == "STORE" || str == "LOAD_INDEX" || str == "STORE_INDEX" ||
+			str == "ALLOC" || str == "SWAP" || str == "HALT") position++;
 		else if (op_vector[i].back() == ':') {
 			std::string c{ op_vector[i].begin(),op_vector[i].end() - 1 };
 			if (cases.count(c)) return {};
@@ -151,55 +142,11 @@ std::vector<uint8_t> Assembler::Compile() {
 		}
 		else if (str == "PRINT") { bytecode.push_back(static_cast<uint8_t>(OpCode::PRINT)); position++; }
 		else if (str == "PRINT_CHAR") { bytecode.push_back(static_cast<uint8_t>(OpCode::PRINT_CHAR)); position++; }
-		else if (str == "LOAD" || str == "STORE") {
-			bytecode.push_back(static_cast<uint8_t>(OpCode::PUSH));
-			if (++i == size) return {};
-
-			if (auto it = variables.find(op_vector[i]);it != variables.end()) {
-				PushMemoryArg(bytecode, it->second);
-			}
-			else {
-				if (str == "LOAD") return {};
-				variables.emplace(op_vector[i], next_var_address);
-				PushMemoryArg(bytecode, next_var_address);
-				next_var_address++;
-			}
-
-			if (str == "LOAD") bytecode.push_back(static_cast<uint8_t>(OpCode::LOAD));
-			else bytecode.push_back(static_cast<uint8_t>(OpCode::STORE));
-
-			position += 6;
-		}
-		else if (str == "ALLOC") {
-			if (++i == size) return {};
-			if (auto it = variables.find(op_vector[i]); it == variables.end()) {
-				variables.emplace(op_vector[i], next_var_address);
-				if (++i == size) return {};
-				try {
-					int32_t size_of_arr = std::stoi(op_vector[i]);
-					if (size_of_arr > 1024 - static_cast<int64_t>(next_var_address) ||
-						size_of_arr < 1) return {};
-					next_var_address += size_of_arr;
-				}
-				catch (...) { return {}; }
-			}
-			else return {};
-		}
-		else if (str == "LOAD_INDEX" || str == "STORE_INDEX") {
-			if (++i == size) return {};
-
-			bytecode.push_back(static_cast<uint8_t>(OpCode::PUSH));
-			if (auto it = variables.find(op_vector[i]); it != variables.end()) {
-				PushMemoryArg(bytecode, it->second);
-			}
-			else return {};
-			bytecode.push_back(static_cast<uint8_t>(OpCode::ADD));
-
-			if (str == "LOAD_INDEX") bytecode.push_back(static_cast<uint8_t>(OpCode::LOAD));
-			else bytecode.push_back(static_cast<uint8_t>(OpCode::STORE));
-
-			position += 7;
-		}
+		else if (str == "LOAD") { bytecode.push_back(static_cast<uint8_t>(OpCode::LOAD)); position++; } 
+		else if (str == "STORE") { bytecode.push_back(static_cast<uint8_t>(OpCode::STORE)); position++; }
+		else if (str == "LOAD_INDEX") { bytecode.push_back(static_cast<uint8_t>(OpCode::LOAD_INDEX)); position++; }
+		else if (str == "STORE_INDEX") { bytecode.push_back(static_cast<uint8_t>(OpCode::STORE_INDEX)); position++; }
+		else if (str == "ALLOC") { bytecode.push_back(static_cast<uint8_t>(OpCode::ALLOC)); position++; }
 		else if(str == "SWAP") { bytecode.push_back(static_cast<uint8_t>(OpCode::SWAP)); position++; }
 		else if (str == "CALL") {
 			if (++i == size) return {};
