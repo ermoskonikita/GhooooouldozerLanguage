@@ -25,8 +25,11 @@ size_t Parser::declare_or_getVar(const std::string& str, SymbolType t) {
 	if (it == symbol_table.end()) {
 		Symbol s;
 		s.type = t;
+
 		s.address = next_free_address++;
 		symbol_table.emplace(str, s);
+
+		return s.address;
 	}
 	else if (t == SymbolType::Scalar && it->second.type == t) return it->second.address;
 	else if (t == SymbolType::Array && it->second.type == t) throw std::runtime_error("Нельзя переопределить массив!");

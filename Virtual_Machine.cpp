@@ -25,7 +25,7 @@ void Virtual_Machine::pop_two(int32_t& right, int32_t& left) {
 	stack.pop_back();
 }
 
-Virtual_Machine::Virtual_Machine() : memory(1024, 0) {}
+Virtual_Machine::Virtual_Machine() : variables(1024, 0) {}
 
 void Virtual_Machine::run() {
 	while (running && ip < bytecode.size()) {
@@ -291,13 +291,15 @@ void Virtual_Machine::run() {
 				running = false;
 				break;
 			}
+
 			int32_t adr = stack.back();
-			if (adr >= memory.size() || adr < 0) {
+			if (adr >= variables.size() || adr < 0) {
 				running = false;
 				break;
 			}
 			stack.pop_back();
-			stack.push_back(memory[adr]);
+
+			stack.push_back(variables[adr]);
 			break;
 		}
 		case OpCode::STORE:
@@ -308,13 +310,108 @@ void Virtual_Machine::run() {
 			}
 
 			int32_t adr = stack.back();
-			if (adr >= memory.size() || adr < 0) {
+			if (adr >= variables.size() || adr < 0) {
 				running = false;
 				break;
 			}
 			stack.pop_back();
-			memory[adr] = stack.back();
+
+			variables[adr] = stack.back();
 			stack.pop_back();
+			break;
+		}
+		case OpCode::LOAD_INDEX:
+		{
+			if (stack.size() < 2) {
+				running = false;
+				break;
+			}
+
+			int32_t adr = stack.back();
+			if (adr >= variables.size() || adr < 0) {
+				running = false;
+				break;
+			}
+			stack.pop_back();
+
+			int32_t len = heap[variables[adr]];
+			int32_t index = stack.back();
+			stack.pop_back();
+
+			if (index < 0 || index >= len) {
+				running = false;
+				break;
+			}
+
+			stack.push_back(heap[variables[adr] + index + 1]);
+			break;
+		}
+		case OpCode::STORE_INDEX:
+		{
+			if (stack.size() < 3) {
+				running = false;
+				break;
+			}
+
+			int32_t adr = stack.back();
+			if (adr >= variables.size() || adr < 0) {
+				running = false;
+				break;
+			}
+			stack.pop_back();
+
+			int32_t len = heap[variables[adr]];
+			int32_t index = stack.back();
+			stack.pop_back();
+
+			if (index < 0 || index >= len) {
+				running = false;
+				break;
+			}
+
+			heap[variables[adr] + index + 1] = stack.back();
+			stack.pop_back();
+
+			break;
+		}
+		case OpCode::ALLOC:
+		{
+			if (stack.size() < 2) {
+				running = false;
+				break;
+			}
+
+			int32_t adr = stack.back();
+			if (adr >= variables.size() || adr < 0) {
+				running = false;
+				break;
+			}
+			stack.pop_back();
+
+			int32_t size = stack.back();
+			if (size < 0 || size > 10'000'000) {
+				running = false;
+				break;
+			}
+			stack.pop_back();
+
+			size_t s32 = heap.size();
+			if (s32 > INT_MAX) {
+				running = false;
+				break;
+			}
+			variables[adr] = static_cast<int32_t>(s32);
+
+			try {
+				heap.push_back(size);
+				heap.resize(heap.size() + size, 0);
+			}
+			catch (const std::exception& e) {
+				std::cerr << "VM Memory Error: " << e.what() << '\n';
+				running = false;
+				break;
+			}
+
 			break;
 		}
 		case OpCode::CALL:

@@ -7,8 +7,10 @@ class Virtual_Machine {
 private:
 	std::vector<uint8_t> bytecode;
 	std::vector<int32_t> stack;
-	std::vector<int32_t> memory;
 	std::vector<int32_t> call_stack;
+	std::vector<int32_t> variables;
+	std::vector<int32_t> heap;
+
 	size_t ip = 0;
 	bool running = true;
 

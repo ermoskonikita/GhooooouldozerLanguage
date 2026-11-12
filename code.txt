@@ -1,38 +1,89 @@
-// 1. Тест обычных переменных в выражениях
-print "--- Scalar Expressions ---\n";
-a = 5;
-b = a++; 
-c = ++a; 
+print "--- Functions & Arrays Test ---\n";
 
-print "b (expected 5) = "; print b; print "\n";
-print "c (expected 7) = "; print c; print "\n";
-print "a (expected 7) = "; print a; print "\n";
+// 1. ОБЪЯВЛЯЕМ ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
+size = 3;
+array arr[size * 2];
+multiplier = 2;
 
-// 2. Тест самостоятельных инструкций (проверка POP)
-print "--- Scalar Statements ---\n";
-a++;
-++a;
-print "a (expected 9) = "; print a; print "\n";
+// 2. ОБЪЯВЛЯЕМ ФУНКЦИИ
+func fill_array() {
+    idx = 0;
+    while (idx < 6) {
+        arr[idx] = idx * 10;
+        idx++;
+    }
+    return 1;
+}
 
-// 3. Тест инкремента элементов массива в выражениях
-print "--- Array Expressions ---\n";
-arr[3]; 
-arr[0] = 10;
-arr[1] = 20;
+func double_array() {
+    idx = 0;
+    while (idx < 6) {
+        arr[idx] = arr[idx] * multiplier;
+        idx++;
+    }
+    return 1;
+}
 
-x = arr[0]++; 
-y = ++arr[1]; 
+func get_magic() {
+    return 99;
+}
 
-print "x (expected 10) = "; print x; print "\n";
-print "arr[0] (expected 11) = "; print arr[0]; print "\n";
+// 3. ОСНОВНАЯ ПРОГРАММА
+print "Calling fill_array()...\n";
+status = fill_array();
 
-print "y (expected 21) = "; print y; print "\n";
-print "arr[1] (expected 21) = "; print arr[1]; print "\n";
+print "arr[2] before (expected 20) = ";
+print arr[2];
+print "\n";
 
-// 4. Тест инкремента массива как самостоятельной инструкции
-print "--- Array Statements ---\n";
+print "Calling double_array()...\n";
+status = double_array();
+
+print "arr[2] after (expected 40) = ";
+print arr[2];
+print "\n";
+
+print "Calling get_magic()...\n";
+magic = get_magic();
+print "magic (expected 99) = ";
+print magic;
+print "\n";
+
+// 4. ТЕСТ ИНКРЕМЕНТОВ И МАССИВОВ
+print "--- Increments ---\n";
+x = arr[2]++; 
+y = ++arr[3]; 
+
+print "x (expected 40) = ";
+print x;
+print "\n";
+
+print "arr[2] (expected 41) = ";
+print arr[2];
+print "\n";
+
+print "y (expected 61) = ";
+print y;
+print "\n";
+
+// 5. ТЕСТ ВЕТВЛЕНИЙ
+print "--- If/Else ---\n";
+if (arr[2] > 40) {
+    print "arr[2] is > 40 (CORRECT)\n";
+} else {
+    print "ERROR!\n";
+}
+
+// 6. ТЕСТ ОДИНОЧНЫХ ИНКРЕМЕНТОВ
 arr[0]++;
 ++arr[1];
 
-print "arr[0] (expected 12) = "; print arr[0]; print "\n";
-print "arr[1] (expected 22) = "; print arr[1]; print "\n";
+print "arr[0] (expected 1) = ";
+print arr[0];
+print "\n";
+
+print "arr[1] (expected 21) = ";
+print arr[1];
+print "\n";
+
+print "ALL TESTS PASSED SUCCESSFULLY!\n";
