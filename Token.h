@@ -21,6 +21,7 @@ enum class TokenType {
 	Else,
 	While,
 	Identifier,
+	Array,
 	String,
 	End
 };

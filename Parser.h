@@ -2,6 +2,17 @@
 #include "Token.h"
 #include <vector>
 #include <string>
+#include <unordered_map>
+
+enum class SymbolType {
+	Scalar,
+	Array
+};
+
+struct Symbol {
+	SymbolType type;
+	size_t address;
+};
 
 class Parser{
 public:
@@ -11,10 +22,16 @@ public:
 private:
 	std::vector<Token> token_vec;
 	size_t pos = 0;
+
 	std::vector<std::string> main_bytecode;
 	std::vector<std::string> func_bytecode;
 	std::vector<std::string> final_bytecode;
 	std::vector<std::string>* target_bytecode;
+
+	std::unordered_map<std::string, Symbol> symbol_table;
+	size_t next_free_address = 0;
+	size_t getVar(const std::string& str, SymbolType t = SymbolType::Scalar);
+	size_t declare_or_getVar(const std::string& str, SymbolType t = SymbolType::Scalar);
 
 	size_t if_counter = 0;
 	size_t while_counter = 0;

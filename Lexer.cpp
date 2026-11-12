@@ -12,6 +12,7 @@ Lexer::Lexer(std::string str) : src(std::move(str)),pos(0) {
 	keywords.emplace("if", TokenType::If);
 	keywords.emplace("else", TokenType::Else);
 	keywords.emplace("while", TokenType::While);
+	keywords.emplace("array", TokenType::Array);
 }
 
 void Lexer::clearComments() {

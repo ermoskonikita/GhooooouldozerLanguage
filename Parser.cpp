@@ -12,6 +12,27 @@ void Parser::expect(TokenType type, const std::string& error_msg) {
 	else throw std::runtime_error(error_msg);
 }
 
+size_t Parser::getVar(const std::string& str, SymbolType t) {
+	if (auto it = symbol_table.find(str); it == symbol_table.end()) {
+		throw std::runtime_error("Переменная не объявлена!");
+	}
+	else if(it->second.type == t) return it->second.address;
+	else throw std::runtime_error("Неверный тип переменной!");
+}
+
+size_t Parser::declare_or_getVar(const std::string& str, SymbolType t) {
+	auto it = symbol_table.find(str);
+	if (it == symbol_table.end()) {
+		Symbol s;
+		s.type = t;
+		s.address = next_free_address++;
+		symbol_table.emplace(str, s);
+	}
+	else if (t == SymbolType::Scalar && it->second.type == t) return it->second.address;
+	else if (t == SymbolType::Array && it->second.type == t) throw std::runtime_error("Нельзя переопределить массив!");
+	else throw std::runtime_error("Неверный тип переменной!");
+}
+
 void Parser::parseFactor() {
 	if (current().type == TokenType::Not) {
 		advance();
@@ -31,11 +52,17 @@ void Parser::parseFactor() {
 			Token id_name = current();
 			advance();
 			if (current().type != TokenType::LBracket) {
-				target_bytecode->push_back("LOAD " + id_name.text);
+
+				size_t addr = getVar(id_name.text);
+				target_bytecode->push_back("PUSH " + std::to_string(addr));
+				target_bytecode->push_back("LOAD");
+
 				target_bytecode->push_back("PUSH 1");
 				target_bytecode->push_back("ADD");
 				target_bytecode->push_back("DUP");
-				target_bytecode->push_back("STORE " + id_name.text);
+
+				target_bytecode->push_back("PUSH " + std::to_string(addr));
+				target_bytecode->push_back("STORE");
 			}
 			else {
 				advance();
@@ -45,7 +72,11 @@ void Parser::parseFactor() {
 				size_t end_size = target_bytecode->size();
 
 				expect(TokenType::RBracket, "Ожидалась ]!");
-				target_bytecode->push_back("LOAD_INDEX " + id_name.text);
+
+				size_t addr = getVar(id_name.text,SymbolType::Array);
+				target_bytecode->push_back("PUSH " + std::to_string(addr));
+				target_bytecode->push_back("LOAD_INDEX");
+
 				target_bytecode->push_back("PUSH 1");
 				target_bytecode->push_back("ADD");
 				target_bytecode->push_back("DUP");
@@ -53,7 +84,8 @@ void Parser::parseFactor() {
 				target_bytecode->insert(target_bytecode->end(),
 					target_bytecode->begin() + start_size,
 					target_bytecode->begin() + end_size);
-				target_bytecode->push_back("STORE_INDEX " + id_name.text);
+				target_bytecode->push_back("PUSH " + std::to_string(addr));
+				target_bytecode->push_back("STORE_INDEX");
 			}
 		}
 		else if (pos + 2 >= token_vec.size()) throw std::runtime_error("Отсутствует выражение или ;!");
@@ -84,11 +116,15 @@ void Parser::parseFactor() {
 			parseOr();
 
 			expect(TokenType::RBracket, "Ожидалась ]!");
+
+			size_t addr = getVar(id_name.text, SymbolType::Array);
 			if (current().type == TokenType::PlusPlus) {
 				advance();
 				size_t end_size = target_bytecode->size();
 
-				target_bytecode->push_back("LOAD_INDEX " + id_name.text);
+				target_bytecode->push_back("PUSH " + std::to_string(addr));
+				target_bytecode->push_back("LOAD_INDEX");
+
 				target_bytecode->push_back("DUP");
 				target_bytecode->push_back("PUSH 1");
 				target_bytecode->push_back("ADD");
@@ -97,19 +133,33 @@ void Parser::parseFactor() {
 					target_bytecode->begin() + start_size,
 					target_bytecode->begin() + end_size);
 
-				target_bytecode->push_back("STORE_INDEX " + id_name.text);
+				target_bytecode->push_back("PUSH " + std::to_string(addr));
+				target_bytecode->push_back("STORE_INDEX");
 			}
-			else target_bytecode->push_back("LOAD_INDEX " + id_name.text);
+			else {
+				target_bytecode->push_back("PUSH " + std::to_string(addr));
+				target_bytecode->push_back("LOAD_INDEX");
+			}
 		}
 		else if (current().type == TokenType::PlusPlus) {
 			advance();
-			target_bytecode->push_back("LOAD " + id_name.text);
+
+			size_t addr = getVar(id_name.text);
+			target_bytecode->push_back("PUSH " + std::to_string(addr));
+			target_bytecode->push_back("LOAD");
+
 			target_bytecode->push_back("DUP");
 			target_bytecode->push_back("PUSH 1");
 			target_bytecode->push_back("ADD");
-			target_bytecode->push_back("STORE " + id_name.text);
+
+			target_bytecode->push_back("PUSH " + std::to_string(addr));
+			target_bytecode->push_back("STORE");
 		}
-		else target_bytecode->push_back("LOAD " + id_name.text);
+		else {
+			size_t addr = getVar(id_name.text);
+			target_bytecode->push_back("PUSH " + std::to_string(addr));
+			target_bytecode->push_back("LOAD");
+		}
 	}
 	else if (current().type == TokenType::LParen) {
 		advance();
@@ -301,25 +351,23 @@ void Parser::parseStatement() {
 		parseOr();
 		expect(TokenType::Semicolon, "Ожидалась точка с запятой!");
 
-		target_bytecode->push_back("STORE " + id_name.text);
+		size_t addr = declare_or_getVar(id_name.text);
+		target_bytecode->push_back("PUSH " + std::to_string(addr));
+		target_bytecode->push_back("STORE");
 	}
-	else if (current().type == TokenType::Identifier && pos + 4 < token_vec.size()
-		&& token_vec[pos + 1].type == TokenType::LBracket
-		&& (token_vec[pos + 2].type == TokenType::Number
-		|| token_vec[pos + 2].type == TokenType::Identifier)
-		&& token_vec[pos + 3].type == TokenType::RBracket
-		&& token_vec[pos + 4].type == TokenType::Semicolon) {
+	else if (current().type == TokenType::Array) {
 
+		advance();
 		Token id_name = current();
-		advance();
-		advance();
-		std::string size_of_arr = current().text;
-
-		advance();
-		advance();
+		expect(TokenType::Identifier, "Ожидалось имя массива!");
+		expect(TokenType::LBracket, "Ожидалась [!");
+		parseOr();
+		expect(TokenType::RBracket, "Ожидалась ]!");
 		expect(TokenType::Semicolon, "Ожидалась точка с запятой!");
 
-		target_bytecode->push_back("ALLOC " + id_name.text + ' ' + size_of_arr);
+		size_t addr = declare_or_getVar(id_name.text, SymbolType::Array);
+		target_bytecode->push_back("PUSH " + std::to_string(addr));
+		target_bytecode->push_back("ALLOC");
 	}
 	else if (current().type == TokenType::Identifier && pos + 1 < token_vec.size()
 		&& token_vec[pos + 1].type == TokenType::LBracket) {
@@ -346,7 +394,9 @@ void Parser::parseStatement() {
 			expect(TokenType::Semicolon, "Ожидалась точка с запятой!");
 
 			target_bytecode->push_back("SWAP");
-			target_bytecode->push_back("STORE_INDEX " + id_name.text);
+			size_t addr = getVar(id_name.text,SymbolType::Array);
+			target_bytecode->push_back("PUSH " + std::to_string(addr));
+			target_bytecode->push_back("STORE_INDEX");
 		}
 		else {
 			pos = rollback_pos;
