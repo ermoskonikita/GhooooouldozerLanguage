@@ -47,7 +47,11 @@ void Parser::parseFactor() {
 		parseFactor();
 		target_bytecode->push_back("BNOT");
 	}
-	else if (current().type == TokenType::PlusPlus) {
+	else if (current().type == TokenType::PlusPlus || current().type == TokenType::MinusMinus) {
+		std::string in_or_dePush;
+		if (current().type == TokenType::PlusPlus) in_or_dePush = "PUSH 1";
+		else in_or_dePush = "PUSH -1";
+
 		if (pos + 2 < token_vec.size() && token_vec[pos + 1].type == TokenType::Identifier
 			&& token_vec[pos + 2].type != TokenType::LParen) {
 			advance();
@@ -60,7 +64,7 @@ void Parser::parseFactor() {
 				target_bytecode->push_back("PUSH " + std::to_string(addr));
 				target_bytecode->push_back("LOAD");
 
-				target_bytecode->push_back("PUSH 1");
+				target_bytecode->push_back(std::move(in_or_dePush));
 				target_bytecode->push_back("ADD");
 				target_bytecode->push_back("DUP");
 
@@ -76,11 +80,11 @@ void Parser::parseFactor() {
 
 				expect(TokenType::RBracket, "Ожидалась ]!");
 
-				size_t addr = getVar(id_name.text,SymbolType::Array);
+				size_t addr = getVar(id_name.text, SymbolType::Array);
 				target_bytecode->push_back("PUSH " + std::to_string(addr));
 				target_bytecode->push_back("LOAD_INDEX");
 
-				target_bytecode->push_back("PUSH 1");
+				target_bytecode->push_back(std::move(in_or_dePush));
 				target_bytecode->push_back("ADD");
 				target_bytecode->push_back("DUP");
 
@@ -95,7 +99,7 @@ void Parser::parseFactor() {
 		else {
 			advance();
 			parseFactor();
-			target_bytecode->push_back("PUSH 1");
+			target_bytecode->push_back(std::move(in_or_dePush));
 			target_bytecode->push_back("ADD");
 		}
 	}
@@ -121,7 +125,11 @@ void Parser::parseFactor() {
 			expect(TokenType::RBracket, "Ожидалась ]!");
 
 			size_t addr = getVar(id_name.text, SymbolType::Array);
-			if (current().type == TokenType::PlusPlus) {
+			if (current().type == TokenType::PlusPlus || current().type == TokenType::MinusMinus) {
+				std::string in_or_dePush;
+				if (current().type == TokenType::PlusPlus) in_or_dePush = "PUSH 1";
+				else in_or_dePush = "PUSH -1";
+
 				advance();
 				size_t end_size = target_bytecode->size();
 
@@ -129,7 +137,7 @@ void Parser::parseFactor() {
 				target_bytecode->push_back("LOAD_INDEX");
 
 				target_bytecode->push_back("DUP");
-				target_bytecode->push_back("PUSH 1");
+				target_bytecode->push_back(std::move(in_or_dePush));
 				target_bytecode->push_back("ADD");
 
 				target_bytecode->insert(target_bytecode->end(),
@@ -144,7 +152,11 @@ void Parser::parseFactor() {
 				target_bytecode->push_back("LOAD_INDEX");
 			}
 		}
-		else if (current().type == TokenType::PlusPlus) {
+		else if (current().type == TokenType::PlusPlus || current().type == TokenType::MinusMinus) {
+			std::string in_or_dePush;
+			if (current().type == TokenType::PlusPlus) in_or_dePush = "PUSH 1";
+			else in_or_dePush = "PUSH -1";
+
 			advance();
 
 			size_t addr = getVar(id_name.text);
@@ -152,7 +164,7 @@ void Parser::parseFactor() {
 			target_bytecode->push_back("LOAD");
 
 			target_bytecode->push_back("DUP");
-			target_bytecode->push_back("PUSH 1");
+			target_bytecode->push_back(std::move(in_or_dePush));
 			target_bytecode->push_back("ADD");
 
 			target_bytecode->push_back("PUSH " + std::to_string(addr));
