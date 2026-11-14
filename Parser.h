@@ -36,7 +36,7 @@ private:
 	size_t if_counter = 0;
 	size_t while_counter = 0;
 
-	Token current();
+	const Token& current();
 	void advance();
 	void expect(TokenType type, const std::string& error_msg);
 
