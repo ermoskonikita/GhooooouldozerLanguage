@@ -49,7 +49,10 @@ private:
 	void parseBOr();
 	void parseAnd();
 	void parseOr();
+	void parseAssign();
 	void parseStatement();
 	void parseBlock();
 	void parseFunctionDecl();
+
+	std::string assignType(TokenType op);
 };

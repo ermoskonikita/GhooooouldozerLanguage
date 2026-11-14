@@ -1,89 +1,48 @@
-print "--- Functions & Arrays Test ---\n";
+// 1. Скалярная арифметика и проверка порядка операндов (-= и /=)
+a = 20;
+a -= 6;      // 20 - 6 = 14 (если порядок перепутан, выйдет -14)
+a *= 3;      // 14 * 3 = 42
+a /= 7;      // 42 / 7 = 6  (если порядок перепутан, выйдет 0)
+print a;
 
-// 1. ОБЪЯВЛЯЕМ ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ
-size = 3;
-array arr[size * 2];
-multiplier = 2;
+// 2. Побитовые составные операторы (&=, |=, ^=)
+mask = 12;   // 1100
+mask &= 10;  // 1100 & 1010 = 1000 (8)
+print mask;
 
-// 2. ОБЪЯВЛЯЕМ ФУНКЦИИ
-func fill_array() {
-    idx = 0;
-    while (idx < 6) {
-        arr[idx] = idx * 10;
-        idx++;
-    }
-    return 1;
-}
+mask |= 3;   // 1000 | 0011 = 1011 (11)
+print mask;
 
-func double_array() {
-    idx = 0;
-    while (idx < 6) {
-        arr[idx] = arr[idx] * multiplier;
-        idx++;
-    }
-    return 1;
-}
+mask ^= 15;  // 1011 ^ 1111 = 0100 (4)
+print mask;
 
-func get_magic() {
-    return 99;
-}
-
-// 3. ОСНОВНАЯ ПРОГРАММА
-print "Calling fill_array()...\n";
-status = fill_array();
-
-print "arr[2] before (expected 20) = ";
-print arr[2];
-print "\n";
-
-print "Calling double_array()...\n";
-status = double_array();
-
-print "arr[2] after (expected 40) = ";
-print arr[2];
-print "\n";
-
-print "Calling get_magic()...\n";
-magic = get_magic();
-print "magic (expected 99) = ";
-print magic;
-print "\n";
-
-// 4. ТЕСТ ИНКРЕМЕНТОВ И МАССИВОВ
-print "--- Increments ---\n";
-x = arr[2]++; 
-y = ++arr[3]; 
-
-print "x (expected 40) = ";
+// 3. Правоассоциативная цепочка со смешанными операторами
+x = 100;
+y = 20;
+z = 3;
+// Справа налево: z = 6 -> y = 14 -> x = 100 / 14 = 7
+x /= y -= z *= 2;
 print x;
-print "\n";
-
-print "arr[2] (expected 41) = ";
-print arr[2];
-print "\n";
-
-print "y (expected 61) = ";
 print y;
-print "\n";
+print z;
 
-// 5. ТЕСТ ВЕТВЛЕНИЙ
-print "--- If/Else ---\n";
-if (arr[2] > 40) {
-    print "arr[2] is > 40 (CORRECT)\n";
-} else {
-    print "ERROR!\n";
-}
+// 4. Массивы: некоммутативные и побитовые операторы + цепочки
+array arr[4];
+arr[0] = 50;
+arr[1] = 10;
+arr[2] = 15;
+arr[3] = 5;
 
-// 6. ТЕСТ ОДИНОЧНЫХ ИНКРЕМЕНТОВ
-arr[0]++;
-++arr[1];
+i = 0;
+arr[i] -= 15;          // 50 - 15 = 35
+arr[i + 1] /= 2;       // 10 / 2 = 5
+arr[2] &= 6;           // 15 & 6 = 6
+arr[3] ^= 3;           // 5 ^ 3 = 6
 
-print "arr[0] (expected 1) = ";
+// Цепочка в массивах: arr[1] = 5 | 8 = 13 -> arr[0] = 35 - 13 = 22
+arr[0] -= arr[1] |= 8;
+
 print arr[0];
-print "\n";
-
-print "arr[1] (expected 21) = ";
 print arr[1];
-print "\n";
-
-print "ALL TESTS PASSED SUCCESSFULLY!\n";
+print arr[2];
+print arr[3];

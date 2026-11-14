@@ -27,33 +27,33 @@ void Lexer::clearComments() {
 
 Token Lexer::GetNextToken() {
 	Token t;
-	std::string text;
 
-	while (pos < src.size() && std::isspace(this->src[pos])) pos++;
+	while (pos < src.size() && std::isspace(static_cast<unsigned char>(src[pos]))) pos++;
 	if (pos == src.size()) {
 		t.type = TokenType::End;
 		return t;
 	}
 
-	if (std::isdigit(this->src[pos])) {
+	if (std::isdigit(static_cast<unsigned char>(src[pos]))) {
 		size_t start_pos = pos;
-		while (pos < src.size() && std::isdigit(this->src[pos])) pos++;
+		while (pos < src.size() && std::isdigit(static_cast<unsigned char>(src[pos]))) pos++;
 
 		t.text = src.substr(start_pos, pos - start_pos);
 		t.type = TokenType::Number;
 	}
-	else if (std::isalpha(this->src[pos])) {
+	else if (std::isalpha(static_cast<unsigned char>(src[pos])) || src[pos] == '_') {
 		size_t start_pos = pos;
-		while (pos < src.size() && (std::isalnum(this->src[pos]) || this->src[pos] == '_')) pos++; 
+		while (pos < src.size() && (std::isalnum(static_cast<unsigned char>(src[pos])) ||
+			src[pos] == '_')) pos++;
 		t.text = src.substr(start_pos, pos - start_pos);
 
 		if (auto it = keywords.find(t.text);it != keywords.end()) t.type = it->second;
 		else t.type = TokenType::Identifier;
 	}
-	else if (this->src[pos] == '"') {
+	else if (src[pos] == '"') {
 		pos++;
 		size_t start_pos = pos;
-		while (pos < src.size() && this->src[pos] != '"') {
+		while (pos < src.size() && src[pos] != '"') {
 			if (src[pos] == '\\' && pos + 1 < src.size() 
 				&& (src[pos + 1] == 'n' || src[pos + 1] == 't')) {
 
@@ -77,8 +77,8 @@ Token Lexer::GetNextToken() {
 		t.type = TokenType::String;
 	}
 	else {
-		char current = this->src[pos++];
-		t.text += current;
+		char current = src[pos++];
+		t.text.push_back(current);
 		switch (current) {
 		case '+': {
 			if (pos < src.size() && src[pos] == '+') {
@@ -102,67 +102,106 @@ Token Lexer::GetNextToken() {
 				t.text.push_back('-');
 				t.type = TokenType::MinusMinus;
 			}
+			else if (pos < src.size() && src[pos] == '=') {
+				pos++;
+				t.text.push_back('=');
+				t.type = TokenType::MinusAssign;
+			}
 			else t.type = TokenType::Minus;
 			break;
 		}
-		case '*':t.type = TokenType::Star; break;
-		case '/':t.type = TokenType::Slash; break;
-		case '=': {
-			if (pos < src.size() && this->src[pos] == '=') {
-				t.type = TokenType::Equal;
-				t.text += '=';
+		case '*': {
+			if (pos < src.size() && src[pos] == '=') {
 				pos++;
+				t.text.push_back('=');
+				t.type = TokenType::StarAssign;
+			}
+			else t.type = TokenType::Star;
+			break;
+		}
+		case '/': {
+			if (pos < src.size() && src[pos] == '=') {
+				pos++;
+				t.text.push_back('=');
+				t.type = TokenType::SlashAssign;
+			}
+			else t.type = TokenType::Slash;
+			break;
+		}
+		case '=': {
+			if (pos < src.size() && src[pos] == '=') {
+				pos++;
+				t.text.push_back('=');
+				t.type = TokenType::Equal;
 			}
 			else t.type = TokenType::Assign;
 			break;
 		}
 		case '<': {
-			if (pos < src.size() && this->src[pos] == '=') {
-				t.type = TokenType::LessEqual;
-				t.text += '=';
+			if (pos < src.size() && src[pos] == '=') {
 				pos++;
+				t.text.push_back('=');
+				t.type = TokenType::LessEqual;
 			}
 			else t.type = TokenType::Less;
 			break;
 		}
 		case '>':
 		{
-			if (pos < src.size() && this->src[pos] == '=') {
-				t.type = TokenType::GreaterEqual;
-				t.text += '=';
+			if (pos < src.size() && src[pos] == '=') {
 				pos++;
+				t.text.push_back('=');
+				t.type = TokenType::GreaterEqual;
 			}
 			else t.type = TokenType::Greater;
 			break;
 		}
 		case '&': {
-			if (pos < src.size() && this->src[pos] == '&') {
-				t.type = TokenType::And;
-				t.text += '&';
+			if (pos < src.size() && src[pos] == '&') {
 				pos++;
+				t.text.push_back('&');
+				t.type = TokenType::And;
+			}
+			else if (pos < src.size() && src[pos] == '=') {
+				pos++;
+				t.text.push_back('=');
+				t.type = TokenType::BAndAssign;
 			}
 			else t.type = TokenType::BAnd;
 			break;
 		}
 		case '|': {
 			if (pos < src.size() && this->src[pos] == '|') {
+				pos++;
 				t.type = TokenType::Or;
 				t.text += '|';
+			}
+			else if (pos < src.size() && src[pos] == '=') {
 				pos++;
+				t.text.push_back('=');
+				t.type = TokenType::BOrAssign;
 			}
 			else t.type = TokenType::BOr;
 			break;
 		}
 		case '!': {
 			if (pos < src.size() && this->src[pos] == '=') {
-				t.type = TokenType::NotEqual;
-				t.text += '=';
 				pos++;
+				t.text.push_back('=');
+				t.type = TokenType::NotEqual;
 			}
 			else t.type = TokenType::Not;
 			break;
 		}
-		case '^':t.type = TokenType::BXor; break;
+		case '^': {
+			if (pos < src.size() && src[pos] == '=') {
+				pos++;
+				t.text.push_back('=');
+				t.type = TokenType::BXorAssign;
+			}
+			else t.type = TokenType::BXor;
+			break;
+		}
 		case '~':t.type = TokenType::BNot; break;
 		case '(':t.type = TokenType::LParen; break;
 		case ')':t.type = TokenType::RParen; break;
