@@ -58,8 +58,8 @@
 
 ### Инструкция по сборке
 
-# 1. Клонирование репозитория
 ```bash
+# 1. Клонирование репозитория
 git clone https://github.com/ermoskonikita/GhooooouldozerLanguage.git
 
 cd GhooooouldozerLanguage
