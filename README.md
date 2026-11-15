@@ -60,7 +60,9 @@
 
 ```
 # 1. Клонирование репозитория
-git clone [https://github.com/ermoskonikita/GhooooouldozerLanguage.git](https://github.com/ermoskonikita/GhooooouldozerLanguage.git)
+```bash
+git clone https://github.com/ermoskonikita/GhooooouldozerLanguage.git
+
 cd GhooooouldozerLanguage
 
 
