@@ -61,7 +61,6 @@
 ```bash
 # 1. Клонирование репозитория
 git clone https://github.com/ermoskonikita/GhooooouldozerLanguage.git
-
 cd GhooooouldozerLanguage
 
 
