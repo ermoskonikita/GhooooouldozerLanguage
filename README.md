@@ -60,8 +60,9 @@
 
 ```
 # 1. Клонирование репозитория
-git clone <url-вашего-репозитория>
-cd <папка-проекта>
+git clone [https://github.com/ermoskonikita/GhooooouldozerLanguage.git](https://github.com/ermoskonikita/GhooooouldozerLanguage.git)
+cd GhooooouldozerLanguage
+
 
 # 2. Конфигурация и сборка
 cmake -B build -DCMAKE_BUILD_TYPE=Release
