@@ -14,26 +14,22 @@ void Parser::expect(TokenType type, const std::string& error_msg) {
 
 size_t Parser::getVar(const std::string& str, SymbolType t) {
 	if (auto it = symbol_table.find(str); it == symbol_table.end()) {
-		throw std::runtime_error("Переменная не объявлена!");
+		throw std::runtime_error("Undeclared variable!");
 	}
 	else if(it->second.type == t) return it->second.address;
-	else throw std::runtime_error("Неверный тип переменной!");
+	throw std::runtime_error("Invalid variable type!");
 }
 
 size_t Parser::declare_or_getVar(const std::string& str, SymbolType t) {
 	auto it = symbol_table.find(str);
 	if (it == symbol_table.end()) {
-		Symbol s;
-		s.type = t;
-
-		s.address = next_free_address++;
-		symbol_table.emplace(str, s);
-
-		return s.address;
+		size_t addr = next_free_address++;
+		symbol_table.emplace(str, Symbol{t,addr});
+		return addr;
 	}
 	else if (t == SymbolType::Scalar && it->second.type == t) return it->second.address;
-	else if (t == SymbolType::Array && it->second.type == t) throw std::runtime_error("Нельзя переопределить массив!");
-	else throw std::runtime_error("Неверный тип переменной!");
+	else if (t == SymbolType::Array && it->second.type == t) throw std::runtime_error("Cannot redefine array!");
+	throw std::runtime_error("Invalid variable type!");
 }
 
 void Parser::parseFactor() {
@@ -76,14 +72,10 @@ void Parser::parseFactor() {
 			else {
 				advance();
 
-				size_t start_size = target_bytecode->size();
 				parseAssign();
-				size_t end_size = target_bytecode->size();
-				std::vector<std::string> copy_vec{
-					target_bytecode->begin() + start_size,
-					target_bytecode->begin() + end_size };
+				target_bytecode->push_back("DUP");
 
-				expect(TokenType::RBracket, "Ожидалась ]!");
+				expect(TokenType::RBracket, "Expected ]!");
 
 				size_t addr = getVar(id_name, SymbolType::Array);
 				target_bytecode->push_back("PUSH " + std::to_string(addr));
@@ -92,20 +84,14 @@ void Parser::parseFactor() {
 				target_bytecode->push_back(std::move(in_or_dePush));
 				target_bytecode->push_back("ADD");
 				target_bytecode->push_back("DUP");
+				target_bytecode->push_back("SWAP3");
 
-				target_bytecode->insert(target_bytecode->end(),
-					copy_vec.begin(), copy_vec.end());
 				target_bytecode->push_back("PUSH " + std::to_string(addr));
 				target_bytecode->push_back("STORE_INDEX");
 			}
 		}
-		else if (pos + 2 >= token_vec.size()) throw std::runtime_error("Отсутствует выражение или ;!");
-		else {
-			advance();
-			parseFactor();
-			target_bytecode->push_back(std::move(in_or_dePush));
-			target_bytecode->push_back("ADD");
-		}
+		else if (pos + 2 >= token_vec.size()) throw std::runtime_error("Expected expression or semicolon!");
+		else throw std::runtime_error("Expected variable name!");
 	}
 	else if (cur == TokenType::Number) {
 		target_bytecode->push_back("PUSH " + current().text);
@@ -119,28 +105,24 @@ void Parser::parseFactor() {
 
 		if (cur_in_id == TokenType::LParen) {
 			advance();
-			expect(TokenType::RParen, "Ожидалась )!");
+			expect(TokenType::RParen, "Expected )!");
 			target_bytecode->push_back("CALL " + id_name);
 		}
 		else if (cur_in_id == TokenType::LBracket) {
 			advance();
 
-			size_t start_size = target_bytecode->size();
 			parseAssign();
-
-			expect(TokenType::RBracket, "Ожидалась ]!");
+			expect(TokenType::RBracket, "Expected ]!");
 
 			size_t addr = getVar(id_name, SymbolType::Array);
 			if (current().type == TokenType::PlusPlus || current().type == TokenType::MinusMinus) {
+				target_bytecode->push_back("DUP");
+
 				std::string in_or_dePush;
 				if (current().type == TokenType::PlusPlus) in_or_dePush = "PUSH 1";
 				else in_or_dePush = "PUSH -1";
 
 				advance();
-				size_t end_size = target_bytecode->size();
-				std::vector<std::string> copy_vec {
-					target_bytecode->begin() + start_size,
-					target_bytecode->begin() + end_size };
 
 				target_bytecode->push_back("PUSH " + std::to_string(addr));
 				target_bytecode->push_back("LOAD_INDEX");
@@ -149,8 +131,8 @@ void Parser::parseFactor() {
 				target_bytecode->push_back(std::move(in_or_dePush));
 				target_bytecode->push_back("ADD");
 
-				target_bytecode->insert(target_bytecode->end(),
-					copy_vec.begin(), copy_vec.end());
+				target_bytecode->push_back("SWAP");
+				target_bytecode->push_back("SWAP3");
 
 				target_bytecode->push_back("PUSH " + std::to_string(addr));
 				target_bytecode->push_back("STORE_INDEX");
@@ -187,18 +169,18 @@ void Parser::parseFactor() {
 	else if (cur == TokenType::LParen) {
 		advance();
 		parseAssign();
-		expect(TokenType::RParen, "Ожидалась закрывающаяся скобка!");
+		expect(TokenType::RParen, "Expected )!");
 	}
-	else throw std::runtime_error("Ожидалось число или выражение в скобках!");
+	else throw std::runtime_error("Expected expression or number!");
 }
 
 void Parser::parseTerm() {
 	parseFactor();
 	while (current().type == TokenType::Star || current().type == TokenType::Slash) {
-		Token t = current();
+		TokenType cur = current().type;
 		advance();
 		parseFactor();
-		if (t.type == TokenType::Star) {
+		if (cur == TokenType::Star) {
 			target_bytecode->push_back("MUL");
 		}
 		else {
@@ -210,10 +192,10 @@ void Parser::parseTerm() {
 void Parser::parseExpression() {
 	parseTerm();
 	while (current().type == TokenType::Plus || current().type == TokenType::Minus) {
-		Token t = current();
+		TokenType cur = current().type;
 		advance();
 		parseTerm();
-		if (t.type == TokenType::Plus) {
+		if (cur == TokenType::Plus) {
 			target_bytecode->push_back("ADD");
 		}
 		else {
@@ -224,28 +206,30 @@ void Parser::parseExpression() {
 
 void Parser::parseComparison() {
 	parseExpression();
-	while (current().type == TokenType::Less || current().type == TokenType::Greater
-		  || current().type == TokenType::Equal || current().type == TokenType::LessEqual
-		  || current().type == TokenType::GreaterEqual || current().type == TokenType::NotEqual) {
-		Token t = current();
+	TokenType cur = current().type;
+	while (cur == TokenType::Less || cur == TokenType::Greater
+		  || cur == TokenType::Equal || cur == TokenType::LessEqual
+		  || cur == TokenType::GreaterEqual || cur == TokenType::NotEqual) {
 		advance();
 		parseExpression();
-		if (t.type == TokenType::Less) {
+		if (cur == TokenType::Less) {
 			target_bytecode->push_back("LT");
 		}
-		else if (t.type == TokenType::LessEqual) {
+		else if (cur == TokenType::LessEqual) {
 			target_bytecode->push_back("LE");
 		}
-		else if (t.type == TokenType::Greater) {
+		else if (cur == TokenType::Greater) {
 			target_bytecode->push_back("GT");
 		}
-		else if (t.type == TokenType::GreaterEqual) {
+		else if (cur == TokenType::GreaterEqual) {
 			target_bytecode->push_back("GE");
 		}
-		else if(t.type == TokenType::Equal){
+		else if(cur == TokenType::Equal){
 			target_bytecode->push_back("EQ");
 		}
 		else target_bytecode->push_back("NE");
+
+		cur = current().type;
 	}
 }
 
@@ -305,25 +289,25 @@ void Parser::parseAssign() {
 		token_vec[pos + 1].type == TokenType::BOrAssign || 
 		token_vec[pos + 1].type == TokenType::BXorAssign)) {
 
-		Token id_name = current();
+		std::string id_name = current().text;
 		advance();
-		Token op = current();
+		TokenType op = current().type;
 		advance();
 
-		if (op.type == TokenType::Assign) {
+		if (op == TokenType::Assign) {
 			parseAssign();
-			size_t addr = declare_or_getVar(id_name.text);
+			size_t addr = declare_or_getVar(id_name);
 			target_bytecode->push_back("DUP");
 			target_bytecode->push_back("PUSH " + std::to_string(addr));
 			target_bytecode->push_back("STORE");
 		}
 		else {
-			size_t addr = getVar(id_name.text);
+			size_t addr = getVar(id_name);
 			target_bytecode->push_back("PUSH " + std::to_string(addr));
 			target_bytecode->push_back("LOAD");
 
 			parseAssign();
-			target_bytecode->push_back(assignType(op.type));
+			target_bytecode->push_back(assignType(op));
 			target_bytecode->push_back("DUP");
 
 			target_bytecode->push_back("PUSH " + std::to_string(addr));
@@ -338,17 +322,17 @@ void Parser::parseAssign() {
 		std::vector<std::string> check_vector;
 		target_bytecode = &check_vector;
 
-		Token id_name = current();
+		std::string id_name = current().text;
 		advance();
 		advance();
 
 		parseAssign();
 
-		expect(TokenType::RBracket, "Ожидалась ]!");
+		expect(TokenType::RBracket, "Expected ]!");
 
 		target_bytecode = copy_ptr;
-		Token cur = current();
-		if (cur.type == TokenType::Assign) {
+		TokenType cur = current().type;
+		if (cur == TokenType::Assign) {
 
 			advance();
 			parseAssign();
@@ -356,31 +340,32 @@ void Parser::parseAssign() {
 
 			target_bytecode->insert(target_bytecode->end(), check_vector.begin(), check_vector.end());
 			
-			size_t addr = getVar(id_name.text, SymbolType::Array);
+			size_t addr = getVar(id_name, SymbolType::Array);
 			target_bytecode->push_back("PUSH " + std::to_string(addr));
 			target_bytecode->push_back("STORE_INDEX");
 		}
-		else if (cur.type == TokenType::PlusAssign ||
-			cur.type == TokenType::MinusAssign ||
-			cur.type == TokenType::StarAssign ||
-			cur.type == TokenType::SlashAssign ||
-			cur.type == TokenType::BAndAssign ||
-			cur.type == TokenType::BOrAssign ||
-			cur.type == TokenType::BXorAssign ) {
+		else if (cur == TokenType::PlusAssign ||
+			cur == TokenType::MinusAssign ||
+			cur == TokenType::StarAssign ||
+			cur == TokenType::SlashAssign ||
+			cur == TokenType::BAndAssign ||
+			cur == TokenType::BOrAssign ||
+			cur == TokenType::BXorAssign ) {
 
 			advance();
 
 			target_bytecode->insert(target_bytecode->end(), check_vector.begin(), check_vector.end());
+			target_bytecode->push_back("DUP");
 
-			size_t addr = getVar(id_name.text, SymbolType::Array);
+			size_t addr = getVar(id_name, SymbolType::Array);
 			target_bytecode->push_back("PUSH " + std::to_string(addr));
 			target_bytecode->push_back("LOAD_INDEX");
 
 			parseAssign();
-			target_bytecode->push_back(assignType(cur.type));
+			target_bytecode->push_back(assignType(cur));
 			target_bytecode->push_back("DUP");
+			target_bytecode->push_back("SWAP3");
 
-			target_bytecode->insert(target_bytecode->end(), check_vector.begin(), check_vector.end());
 			target_bytecode->push_back("PUSH " + std::to_string(addr));
 			target_bytecode->push_back("STORE_INDEX");
 		}
@@ -395,93 +380,96 @@ void Parser::parseAssign() {
 }
 
 void Parser::parseStatement() {
-	if (current().type == TokenType::Print) {
+	TokenType cur = current().type;
+
+	if (cur == TokenType::Print) {
 		advance();
 
-		Token print_expr = current();
+		const Token& print_expr = current();
 		if (print_expr.type == TokenType::String) {
+			target_bytecode->reserve(target_bytecode->size() + print_expr.text.size() * 2);
 			for (unsigned char sym : print_expr.text) {
 				target_bytecode->push_back("PUSH " + std::to_string(sym));
 				target_bytecode->push_back("PRINT_CHAR");
 			}
 			advance();
-			expect(TokenType::Semicolon, "Ожидалась точка с запятой!");
+			expect(TokenType::Semicolon, "Expected semicolon!");
 		}
 		else {
 			parseAssign();
-			expect(TokenType::Semicolon, "Ожидалась точка с запятой!");
+			expect(TokenType::Semicolon, "Expected semicolon!");
 			target_bytecode->push_back("PRINT");
 		}
 	}
-	else if (current().type == TokenType::Return) {
+	else if (cur == TokenType::Return) {
 		advance();
 		parseAssign();
-		expect(TokenType::Semicolon, "Ожидалась точка с запятой!");
+		expect(TokenType::Semicolon, "Expected semicolon!");
 		target_bytecode->push_back("RET");
 	}
-	else if (current().type == TokenType::If) {
+	else if (cur == TokenType::If) {
 		advance();
-		expect(TokenType::LParen, "Ожидалась (!");
+		expect(TokenType::LParen, "Expected (!");
 		parseAssign();
-		expect(TokenType::RParen, "Ожидалась )!");
+		expect(TokenType::RParen, "Expected )!");
 
 		target_bytecode->push_back("JZ ");
 		size_t if_else_index = target_bytecode->size() - 1;
 
-		expect(TokenType::LBrace, "Ожидалась {!");
+		expect(TokenType::LBrace, "Expected {!");
 		parseBlock();
-		expect(TokenType::RBrace, "Ожидалась }!");
+		expect(TokenType::RBrace, "Expected }!");
 
-		int64_t if_number = if_counter++;
-		target_bytecode->push_back(std::string("JMP ") + "end_if_" + std::to_string(if_number));
+		std::string if_number_to_str = std::to_string(if_counter++);
+		target_bytecode->push_back("JMP end_if_" + if_number_to_str);
 
 		if (current().type == TokenType::Else) {
-			(*target_bytecode)[if_else_index] += ("else_" + std::to_string(if_number));
+			(*target_bytecode)[if_else_index] += ("else_" + if_number_to_str);
 
-			target_bytecode->push_back("else_" + std::to_string(if_number) + ':');
+			target_bytecode->push_back("else_" + if_number_to_str + ':');
 			advance();
-			expect(TokenType::LBrace, "Ожидалась {!");
+			expect(TokenType::LBrace, "Expected {!");
 			parseBlock();
-			expect(TokenType::RBrace, "Ожидалась }!");
+			expect(TokenType::RBrace, "Expected }!");
 		}
-		else (*target_bytecode)[if_else_index] += ("end_if_" + std::to_string(if_number));
+		else (*target_bytecode)[if_else_index] += ("end_if_" + if_number_to_str);
 
-		target_bytecode->push_back("end_if_" + std::to_string(if_number) + ':');
+		target_bytecode->push_back("end_if_" + std::move(if_number_to_str) + ':');
 	}
-	else if (current().type == TokenType::While) {
+	else if (cur == TokenType::While) {
 		advance();
 
-		int64_t while_number = while_counter++;
-		target_bytecode->push_back("while_" + std::to_string(while_number) + ':');
-		expect(TokenType::LParen, "Ожидалась (!");
+		std::string while_number_to_str = std::to_string(while_counter++);
+		target_bytecode->push_back("while_" + while_number_to_str + ':');
+		expect(TokenType::LParen, "Expected (!");
 		parseAssign();
-		expect(TokenType::RParen, "Ожидалась )!");
-		target_bytecode->push_back(std::string("JZ ") + "end_while_" + std::to_string(while_number));
+		expect(TokenType::RParen, "Expected )!");
+		target_bytecode->push_back("JZ end_while_" + while_number_to_str);
 
-		expect(TokenType::LBrace, "Ожидалась {!");
+		expect(TokenType::LBrace, "Expected {!");
 		parseBlock();
-		expect(TokenType::RBrace, "Ожидалась }!");
-		target_bytecode->push_back(std::string("JMP ") + "while_" + std::to_string(while_number));
+		expect(TokenType::RBrace, "Expected }!");
+		target_bytecode->push_back("JMP while_" + while_number_to_str);
 
-		target_bytecode->push_back("end_while_" + std::to_string(while_number) + ':');
+		target_bytecode->push_back("end_while_" + std::move(while_number_to_str) + ':');
 	}
-	else if (current().type == TokenType::Array) {
+	else if (cur == TokenType::Array) {
 
 		advance();
-		Token id_name = current();
-		expect(TokenType::Identifier, "Ожидалось имя массива!");
-		expect(TokenType::LBracket, "Ожидалась [!");
+		const std::string& id_name = current().text;
+		expect(TokenType::Identifier, "Expected array name!");
+		expect(TokenType::LBracket, "Expected [!");
 		parseAssign();
-		expect(TokenType::RBracket, "Ожидалась ]!");
-		expect(TokenType::Semicolon, "Ожидалась точка с запятой!");
+		expect(TokenType::RBracket, "Expected ]!");
+		expect(TokenType::Semicolon, "Expected semicolon!");
 
-		size_t addr = declare_or_getVar(id_name.text, SymbolType::Array);
+		size_t addr = declare_or_getVar(id_name, SymbolType::Array);
 		target_bytecode->push_back("PUSH " + std::to_string(addr));
 		target_bytecode->push_back("ALLOC");
 	}
 	else {
 		parseAssign();
-		expect(TokenType::Semicolon, "Ожидалась точка с запятой!");
+		expect(TokenType::Semicolon, "Expected semicolon!");
 		target_bytecode->push_back("POP");
 	}
 }
@@ -493,21 +481,22 @@ void Parser::parseBlock() {
 
 void Parser::parseFunctionDecl() {
 	advance();
-	Token func_name = current();
-	expect(TokenType::Identifier, "Ожидалось имя функции!");
+	const std::string& func_name = current().text;
+	expect(TokenType::Identifier, "Expected function name!");
 
 	target_bytecode = &func_bytecode;
+	target_bytecode->push_back(func_name + ':');
 
-	target_bytecode->push_back(func_name.text + ':');
-
-	expect(TokenType::LParen, "Ожидалась (!");
-	expect(TokenType::RParen, "Ожидалась )!");
-	expect(TokenType::LBrace, "Ожидалась {!");
+	expect(TokenType::LParen, "Expected (!");
+	expect(TokenType::RParen, "Expected )!");
+	expect(TokenType::LBrace, "Expected {!");
 	parseBlock();
-	expect(TokenType::RBrace, "Ожидалась }!");
+	expect(TokenType::RBrace, "Expected }!");
 
-	target_bytecode->push_back("PUSH 0");
-	target_bytecode->push_back("RET");
+	if (target_bytecode->empty() || target_bytecode->back() != "RET") {
+		target_bytecode->push_back("PUSH 0");
+		target_bytecode->push_back("RET");
+	}
 	target_bytecode = &main_bytecode;
 }
 
@@ -526,7 +515,7 @@ void Parser::parse() {
 	for (const auto& str : final_bytecode) std::cout << str << '\n'; 
 }
 
-const std::vector<std::string>& Parser::getBytecode() {
+const std::vector<std::string>& Parser::getBytecode() const{
 	return final_bytecode;
 }
 
@@ -547,6 +536,6 @@ std::string Parser::assignType(TokenType op) {
 	case TokenType::BXorAssign:
 		return "BXOR";
 	default:
-		throw std::runtime_error("Неизвестный символ");
+		throw std::runtime_error("Unknown symbol!");
 	}
 }

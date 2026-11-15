@@ -3,13 +3,9 @@
 #include <cctype>
 #include <unordered_map>
 #include <iostream>
+#include <stdexcept>
 
 int32_t Virtual_Machine::read_int32() {
-	if (ip + 4 > bytecode.size()) {
-		running = false;
-		return 0;
-	}
-
 	int32_t arg = 0;
 	for (int i = 0; i < 4; i++) {
 		arg |= static_cast<int32_t>(bytecode[ip++]) << (8 * i);
@@ -25,7 +21,7 @@ void Virtual_Machine::pop_two(int32_t& right, int32_t& left) {
 	stack.pop_back();
 }
 
-Virtual_Machine::Virtual_Machine() : variables(1024, 0) {}
+Virtual_Machine::Virtual_Machine(std::vector<uint8_t> bc) : bytecode(std::move(bc)), variables(1024, 0) {}
 
 void Virtual_Machine::run() {
 	while (running && ip < bytecode.size()) {
@@ -33,22 +29,24 @@ void Virtual_Machine::run() {
 		switch (code) {
 		case OpCode::PUSH:
 		{
+			if (ip + 4 > bytecode.size()) {
+				throw std::runtime_error("Unexpected end of bytecode while reading operand!");
+			}
+
 			int32_t arg = read_int32();
-			if (running) stack.push_back(arg);
+			stack.push_back(arg);
 			break;
 		}
 		case OpCode::POP:
 			if (stack.empty()) {
-				running = false;
-				break;
+				throw std::runtime_error("Stack underflow!");
 			}
 
 			stack.pop_back();
 			break;
 		case OpCode::DUP:
 			if (stack.empty()) {
-				running = false;
-				break;
+				throw std::runtime_error("Stack underflow!");
 			}
 
 			stack.push_back(stack.back());
@@ -56,8 +54,7 @@ void Virtual_Machine::run() {
 		case OpCode::ADD:
 		{
 			if (stack.size() < 2) {
-				running = false;
-				break;
+				throw std::runtime_error("Stack underflow on ADD!");
 			}
 
 			int32_t right, left;
@@ -65,9 +62,8 @@ void Virtual_Machine::run() {
 
 			int64_t sum = static_cast<int64_t>(left) + right;
 
-			if (sum > INT_MAX || sum < INT_MIN) {
-				running = false;
-				break;
+			if (sum > INT32_MAX || sum < INT32_MIN) {
+				throw std::runtime_error("Overflow on ADD!");
 			}
 
 			stack.push_back(static_cast<int32_t>(sum));
@@ -76,8 +72,7 @@ void Virtual_Machine::run() {
 		case OpCode::SUB:
 		{
 			if (stack.size() < 2) {
-				running = false;
-				break;
+				throw std::runtime_error("Stack underflow on SUB!");
 			}
 
 			int32_t right, left;
@@ -85,9 +80,8 @@ void Virtual_Machine::run() {
 
 			int64_t sub = static_cast<int64_t>(left) - right;
 
-			if (sub > INT_MAX || sub < INT_MIN) {
-				running = false;
-				break;
+			if (sub > INT32_MAX || sub < INT32_MIN) {
+				throw std::runtime_error("Overflow on SUB!");
 			}
 
 			stack.push_back(static_cast<int32_t>(sub));
@@ -96,8 +90,7 @@ void Virtual_Machine::run() {
 		case OpCode::MUL:
 		{
 			if (stack.size() < 2) {
-				running = false;
-				break;
+				throw std::runtime_error("Stack underflow on MUL!");
 			}
 
 			int32_t right, left;
@@ -105,9 +98,8 @@ void Virtual_Machine::run() {
 
 			int64_t mul = static_cast<int64_t>(left) * right;
 
-			if (mul > INT_MAX || mul < INT_MIN) {
-				running = false;
-				break;
+			if (mul > INT32_MAX || mul < INT32_MIN) {
+				throw std::runtime_error("Overflow on MUL!");
 			}
 
 			stack.push_back(static_cast<int32_t>(mul));
@@ -116,12 +108,10 @@ void Virtual_Machine::run() {
 		case OpCode::DIV:
 		{
 			if (stack.size() < 2) {
-				running = false;
-				break;
+				throw std::runtime_error("Stack underflow on DIV!");
 			}
 			if (stack.back() == 0) {
-				running = false;
-				break;
+				throw std::runtime_error("Division by zero!");
 			}
 
 			int32_t right, left;
@@ -129,9 +119,8 @@ void Virtual_Machine::run() {
 
 			int64_t div = static_cast<int64_t>(left) / right;
 
-			if (div > INT_MAX || div < INT_MIN) {
-				running = false;
-				break;
+			if (div > INT32_MAX || div < INT32_MIN) {
+				throw std::runtime_error("Overflow on DIV!");
 			}
 
 			stack.push_back(static_cast<int32_t>(div));
@@ -140,8 +129,7 @@ void Virtual_Machine::run() {
 		case OpCode::BAND:
 		{
 			if (stack.size() < 2) {
-				running = false;
-				break;
+				throw std::runtime_error("Stack underflow on BAND!");
 			}
 
 			int32_t right, left;
@@ -153,8 +141,7 @@ void Virtual_Machine::run() {
 		case OpCode::BOR:
 		{
 			if (stack.size() < 2) {
-				running = false;
-				break;
+				throw std::runtime_error("Stack underflow on BOR!");
 			}
 
 			int32_t right, left;
@@ -166,8 +153,7 @@ void Virtual_Machine::run() {
 		case OpCode::BXOR:
 		{
 			if (stack.size() < 2) {
-				running = false;
-				break;
+				throw std::runtime_error("Stack underflow on BXOR!");
 			}
 
 			int32_t right, left;
@@ -179,8 +165,7 @@ void Virtual_Machine::run() {
 		case OpCode::BNOT:
 		{
 			if (stack.empty()) {
-				running = false;
-				break;
+				throw std::runtime_error("Stack underflow on BNOT!");
 			}
 
 			int32_t val = stack.back();
@@ -199,8 +184,7 @@ void Virtual_Machine::run() {
 		case OpCode::OR:
 		{
 			if (stack.size() < 2) {
-				running = false;
-				break;
+				throw std::runtime_error("Stack underflow on comparison or logical operation!");
 			}
 
 			int32_t right, left;
@@ -219,8 +203,7 @@ void Virtual_Machine::run() {
 		case OpCode::NOT:
 		{
 			if (stack.empty()) {
-				running = false;
-				break;
+				throw std::runtime_error("Stack underflow on NOT!");
 			}
 
 			int32_t val = stack.back();
@@ -231,14 +214,17 @@ void Virtual_Machine::run() {
 		}
 		case OpCode::JMP:
 		{
+			if (ip + 4 > bytecode.size()) {
+				throw std::runtime_error("Unexpected end of bytecode while reading operand!");
+			}
+
 			int64_t pointer = ip;
 			pointer += read_int32();
-			if (!running) break;
 
 			if (pointer >= static_cast<int64_t>(bytecode.size()) || pointer < 0) {
-				running = false;
-				break;
+				throw std::runtime_error("Jump target out of bytecode bounds!");
 			}
+
 			ip = pointer;
 			break;
 		}
@@ -246,13 +232,15 @@ void Virtual_Machine::run() {
 		case OpCode::JNZ:
 		{
 			if (stack.empty()) {
-				running = false;
-				break;
+				throw std::runtime_error("Stack underflow!");
+			}
+
+			if (ip + 4 > bytecode.size()) {
+				throw std::runtime_error("Unexpected end of bytecode while reading operand!");
 			}
 
 			int64_t pointer = ip;
 			pointer += read_int32();
-			if (!running) break;
 
 			int32_t if0 = stack.back();
 			stack.pop_back();
@@ -260,42 +248,32 @@ void Virtual_Machine::run() {
 			if (!if0 && code == OpCode::JNZ) break;
 
 			if (pointer >= static_cast<int64_t>(bytecode.size()) || pointer < 0) {
-				running = false;
-				break;
+				throw std::runtime_error("Jump target out of bytecode bounds!");
 			}
 
 			ip = pointer;
 			break;
 		}
 		case OpCode::PRINT:
-			if (stack.empty()) {
-				running = false;
-				break;
-			}
-
-			std::cout << stack.back() << '\n';
-			stack.pop_back();
-			break;
 		case OpCode::PRINT_CHAR:
 			if (stack.empty()) {
-				running = false;
-				break;
+				throw std::runtime_error("Stack underflow on PRINT!");
 			}
 
-			std::cout << static_cast<unsigned char>(stack.back());
+			if(code == OpCode::PRINT) std::cout << stack.back();
+			else std::cout << static_cast<unsigned char>(stack.back());
+
 			stack.pop_back();
 			break;
 		case OpCode::LOAD:
 		{
 			if (stack.empty()) {
-				running = false;
-				break;
+				throw std::runtime_error("Stack underflow on LOAD!");
 			}
 
 			int32_t adr = stack.back();
-			if (adr >= variables.size() || adr < 0) {
-				running = false;
-				break;
+			if (adr < 0 || static_cast<size_t>(adr) >= variables.size()) {
+				throw std::runtime_error("Variable address out of bounds on LOAD!");
 			}
 			stack.pop_back();
 
@@ -305,14 +283,12 @@ void Virtual_Machine::run() {
 		case OpCode::STORE:
 		{
 			if (stack.size() < 2) {
-				running = false;
-				break;
+				throw std::runtime_error("Stack underflow on STORE!");
 			}
 
 			int32_t adr = stack.back();
-			if (adr >= variables.size() || adr < 0) {
-				running = false;
-				break;
+			if (adr < 0 || static_cast<size_t>(adr) >= variables.size()) {
+				throw std::runtime_error("Variable address out of bounds on STORE!");
 			}
 			stack.pop_back();
 
@@ -323,53 +299,57 @@ void Virtual_Machine::run() {
 		case OpCode::LOAD_INDEX:
 		{
 			if (stack.size() < 2) {
-				running = false;
-				break;
+				throw std::runtime_error("Stack underflow on LOAD_INDEX!");
 			}
 
 			int32_t adr = stack.back();
-			if (adr >= variables.size() || adr < 0) {
-				running = false;
-				break;
+			if (adr < 0 || static_cast<size_t>(adr) >= variables.size()) {
+				throw std::runtime_error("Variable address out of bounds on LOAD_INDEX!");
 			}
 			stack.pop_back();
 
-			int32_t len = heap[variables[adr]];
 			int32_t index = stack.back();
 			stack.pop_back();
 
-			if (index < 0 || index >= len) {
-				running = false;
-				break;
+			int32_t heap_ptr = variables[adr];
+			if (heap_ptr < 0 || static_cast<size_t>(heap_ptr) >= heap.size()) {
+				throw std::runtime_error("Invalid array pointer on LOAD_INDEX!");
 			}
 
-			stack.push_back(heap[variables[adr] + index + 1]);
+			int32_t len = heap[heap_ptr];
+			if (index < 0 || index >= len) {
+				throw std::runtime_error("Array index out of bounds on LOAD_INDEX!");
+			}
+
+			stack.push_back(heap[static_cast<size_t>(heap_ptr) + index + 1]);
 			break;
 		}
 		case OpCode::STORE_INDEX:
 		{
 			if (stack.size() < 3) {
-				running = false;
-				break;
+				throw std::runtime_error("Stack underflow on STORE_INDEX!");
 			}
 
 			int32_t adr = stack.back();
-			if (adr >= variables.size() || adr < 0) {
-				running = false;
-				break;
+			if (adr < 0 || static_cast<size_t>(adr) >= variables.size()) {
+				throw std::runtime_error("Variable address out of bounds on STORE_INDEX!");
 			}
 			stack.pop_back();
 
-			int32_t len = heap[variables[adr]];
 			int32_t index = stack.back();
 			stack.pop_back();
 
-			if (index < 0 || index >= len) {
-				running = false;
-				break;
+			int32_t heap_ptr = variables[adr];
+			if (heap_ptr < 0 || static_cast<size_t>(heap_ptr) >= heap.size()) {
+				throw std::runtime_error("Invalid array pointer on STORE_INDEX!");
 			}
 
-			heap[variables[adr] + index + 1] = stack.back();
+			int32_t len = heap[heap_ptr];
+			if (index < 0 || index >= len) {
+				throw std::runtime_error("Array index out of bounds on STORE_INDEX!");
+			}
+
+			heap[static_cast<size_t>(heap_ptr) + index + 1] = stack.back();
 			stack.pop_back();
 
 			break;
@@ -377,95 +357,84 @@ void Virtual_Machine::run() {
 		case OpCode::ALLOC:
 		{
 			if (stack.size() < 2) {
-				running = false;
-				break;
+				throw std::runtime_error("Stack underflow on ALLOC!");
 			}
 
 			int32_t adr = stack.back();
-			if (adr >= variables.size() || adr < 0) {
-				running = false;
-				break;
+			if (adr < 0 || static_cast<size_t>(adr) >= variables.size()) {
+				throw std::runtime_error("Variable address out of bounds on ALLOC!");
 			}
 			stack.pop_back();
 
 			int32_t size = stack.back();
 			if (size < 0 || size > 10'000'000) {
-				running = false;
-				break;
+				throw std::runtime_error("Invalid array size on ALLOC!");
 			}
 			stack.pop_back();
 
 			size_t s32 = heap.size();
-			if (s32 > INT_MAX) {
-				running = false;
-				break;
+			if (s32 > INT32_MAX) {
+				throw std::runtime_error("Heap overflow on ALLOC!");
 			}
-			variables[adr] = static_cast<int32_t>(s32);
 
 			try {
 				heap.push_back(size);
 				heap.resize(heap.size() + size, 0);
 			}
-			catch (const std::exception& e) {
-				std::cerr << "VM Memory Error: " << e.what() << '\n';
-				running = false;
-				break;
+			catch (const std::exception&) {
+				throw std::runtime_error("VM Memory error on ALLOC!");
 			}
+
+			variables[adr] = static_cast<int32_t>(s32);
 
 			break;
 		}
 		case OpCode::CALL:
 		{
+			if (ip + 4 > bytecode.size()) {
+				throw std::runtime_error("Unexpected end of bytecode while reading operand!");
+			}
+
 			int64_t pointer = ip;
 			int32_t jmp = read_int32();
-			if (!running) break;
 
 			call_stack.push_back(static_cast<int32_t>(ip));
+			if (call_stack.size() >= 10000) throw std::runtime_error("Call stack overflow!");
+
 			pointer += jmp;
 			if (pointer < 0 || pointer >= static_cast<int64_t>(bytecode.size())) {
-				running = false;
-				break;
+				throw std::runtime_error("Jump target out of bytecode bounds!");
 			}
 			ip = pointer;
+
 			break;
 		}
 		case OpCode::RET:
 			if (call_stack.empty()) {
-				running = false;
-				break;
+				throw std::runtime_error("Call stack underflow on RET!");
 			}
+
 			ip = call_stack.back();
 			call_stack.pop_back();
 			break;
 		case OpCode::SWAP:
 			if (stack.size() < 2) {
-				running = false;
-				break;
+				throw std::runtime_error("Stack underflow on SWAP!");
 			}
 			std::swap(stack.back(), *(stack.end() - 2));
+			break;
+		case OpCode::SWAP3:
+			if (stack.size() < 3) {
+				throw std::runtime_error("Stack underflow on SWAP3!");
+			}
+
+			std::swap(stack.back(), *(stack.end() - 3));
 			break;
 		case OpCode::HALT:
 			running = false;
 			break;
 		default:
-			running = false;
-			break;
+			throw std::runtime_error("Unknown instruction!");
 		}
 	}
-}
-
-void Virtual_Machine::reset() {
-	ip = 0;
-	stack.clear();
-	running = true;
-}
-
-void Virtual_Machine::SetBytecode(const std::vector<uint8_t>& bc) {
-	reset();
-	bytecode = bc;
-}
-
-void Virtual_Machine::SetBytecode(std::vector<uint8_t>&& bc) {
-	reset();
-	bytecode = std::move(bc);
 }

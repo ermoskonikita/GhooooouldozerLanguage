@@ -35,5 +35,6 @@ enum class OpCode : uint8_t {
 	CALL = 0x1F,
 	RET = 0x20,
 	SWAP = 0x21,
+	SWAP3 = 0x22,
 	HALT = 0xFF
 };

@@ -1,6 +1,5 @@
 #include "Assembler.h"
 #include <sstream>
-#include <fstream>
 #include <stdexcept>
 
 void Assembler::PushCaseArg(std::vector<uint8_t>& bytecode, std::unordered_map<std::string, int32_t>::iterator it, int32_t position) {
@@ -16,23 +15,6 @@ void Assembler::PushArg(std::vector<uint8_t>& bytecode, size_t& i) {
 	for (int k = 0; k <= 3; k++) {
 		bytecode.push_back(static_cast<uint8_t>(arg));
 		arg >>= 8;
-	}
-}
-
-Assembler::Assembler(const std::string& str) {
-	std::ifstream file(str);
-	if (!file.is_open()) throw std::runtime_error("Не удалось открыть файл: " + str);
-
-	std::stringstream buf;
-	buf << file.rdbuf();
-	op_str = buf.str();
-
-	size_t i;
-	while ((i = op_str.find("//")) != std::string::npos) {
-		size_t length = op_str.length();
-		size_t l = i;
-		while (l < length && op_str[l] != '\n') l++;
-		op_str.erase(op_str.begin() + i, op_str.begin() + l);
 	}
 }
 
@@ -65,24 +47,31 @@ std::vector<uint8_t> Assembler::Compile() {
 			str == "GE" || str == "EQ" || str == "NE" || str == "AND" || str == "OR" ||
 			str == "NOT" || str == "PRINT" || str == "PRINT_CHAR" || str == "RET" ||
 			str == "LOAD" || str == "STORE" || str == "LOAD_INDEX" || str == "STORE_INDEX" ||
-			str == "ALLOC" || str == "SWAP" || str == "HALT") position++;
+			str == "ALLOC" || str == "SWAP" || str == "SWAP3" || str == "HALT") position++;
 		else if (op_vector[i].back() == ':') {
 			std::string c{ op_vector[i].begin(),op_vector[i].end() - 1 };
-			if (cases.count(c)) return {};
+			if (cases.count(c)) {
+				throw std::runtime_error("Assembler: Fatal error! Repeating label!");
+			}
 			cases.emplace(c, position);
 		}
-		else return {};
+		else throw std::runtime_error("Assembler: Fatal error! Unknown operation!");
 	}
 
+	bytecode.reserve(position);
 	position = 0;
 	for (size_t i = 0; i < size; i++) {
 		const std::string& str = op_vector[i];
 
 		if (str == "PUSH") {
-			if (++i == size) return {};
+			if (++i == size) {
+				throw std::runtime_error("Assembler: Fatal error!");
+			}
 			bytecode.push_back(static_cast<uint8_t>(OpCode::PUSH));
 			try { PushArg(bytecode, i); }
-			catch (...) { return {}; }
+			catch (...) {
+				throw std::runtime_error("Assembler: Fatal error!");
+			}
 			position += 5;
 		}
 		else if (str == "POP") { bytecode.push_back(static_cast<uint8_t>(OpCode::POP)); position++; }
@@ -105,38 +94,50 @@ std::vector<uint8_t> Assembler::Compile() {
 		else if (str == "OR") { bytecode.push_back(static_cast<uint8_t>(OpCode::OR)); position++; }
 		else if (str == "NOT") { bytecode.push_back(static_cast<uint8_t>(OpCode::NOT)); position++; }
 		else if (str == "JMP") {
-			if (++i == size) return {};
+			if (++i == size) {
+				throw std::runtime_error("Assembler: Fatal error!");
+			}
 			bytecode.push_back(static_cast<uint8_t>(OpCode::JMP));
 			if (auto it = cases.find(op_vector[i]); it != cases.end()) {
 				PushCaseArg(bytecode, it, position);
 			}
 			else {
 				try { PushArg(bytecode, i); }
-				catch (...) { return {}; }
+				catch (...) {
+					throw std::runtime_error("Assembler: Fatal error!");
+				}
 			}
 			position += 5;
 		}
 		else if (str == "JZ") {
-			if (++i == size) return {};
+			if (++i == size) {
+				throw std::runtime_error("Assembler: Fatal error!");
+			}
 			bytecode.push_back(static_cast<uint8_t>(OpCode::JZ));
 			if (auto it = cases.find(op_vector[i]); it != cases.end()) {
 				PushCaseArg(bytecode, it, position);
 			}
 			else {
 				try { PushArg(bytecode, i); }
-				catch (...) { return {}; }
+				catch (...) { 
+					throw std::runtime_error("Assembler: Fatal error!");
+				}
 			}
 			position += 5;
 		}
 		else if (str == "JNZ") {
-			if (++i == size) return {};
+			if (++i == size) {
+				throw std::runtime_error("Assembler: Fatal error!");
+			}
 			bytecode.push_back(static_cast<uint8_t>(OpCode::JNZ));
 			if (auto it = cases.find(op_vector[i]); it != cases.end()) {
 				PushCaseArg(bytecode, it, position);
 			}
 			else {
 				try { PushArg(bytecode, i); }
-				catch (...) { return {}; }
+				catch (...) {
+					throw std::runtime_error("Assembler: Fatal error!");
+				}
 			}
 			position += 5;
 		}
@@ -148,19 +149,26 @@ std::vector<uint8_t> Assembler::Compile() {
 		else if (str == "STORE_INDEX") { bytecode.push_back(static_cast<uint8_t>(OpCode::STORE_INDEX)); position++; }
 		else if (str == "ALLOC") { bytecode.push_back(static_cast<uint8_t>(OpCode::ALLOC)); position++; }
 		else if(str == "SWAP") { bytecode.push_back(static_cast<uint8_t>(OpCode::SWAP)); position++; }
+		else if (str == "SWAP3") { bytecode.push_back(static_cast<uint8_t>(OpCode::SWAP3)); position++; }
 		else if (str == "CALL") {
-			if (++i == size) return {};
+			if (++i == size) {
+				throw std::runtime_error("Assembler: Fatal error! Undeclared function!");
+			}
 			bytecode.push_back(static_cast<uint8_t>(OpCode::CALL));
 			if (auto it = cases.find(op_vector[i]); it != cases.end()) {
 				PushCaseArg(bytecode, it, position);
 				position += 5;
 			}
-			else return {};
+			else {
+				throw std::runtime_error("Assembler: Fatal error! Undeclared function!");
+			}
 		}
 		else if (str == "RET") { bytecode.push_back(static_cast<uint8_t>(OpCode::RET)); position++; }
 		else if (str == "HALT") { bytecode.push_back(static_cast<uint8_t>(OpCode::HALT)); position++; }
 		else if (str.back() == ':') continue;
-		else return {};
+		else {
+			throw std::runtime_error("Assembler: Fatal error! Unknown operation!");
+		}
 	}
 
 	return bytecode;

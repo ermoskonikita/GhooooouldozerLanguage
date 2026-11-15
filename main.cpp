@@ -7,16 +7,13 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
-#include <Windows.h>
 
 int main() {
-	SetConsoleOutputCP(CP_UTF8);
-	SetConsoleCP(CP_UTF8);
 
 	std::ifstream file("code.txt");
 
 	try {
-		if (!file.is_open()) throw std::runtime_error("Не удалось открыть файл!");
+		if (!file.is_open()) throw std::runtime_error("Failed to open file!");
 		std::stringstream buf;
 		buf << file.rdbuf();
 		std::string src = buf.str();
@@ -27,14 +24,13 @@ int main() {
 
 		Assembler assembler(parser.getBytecode());
 
-		Virtual_Machine vm;
-		vm.SetBytecode(assembler.Compile());
+		Virtual_Machine vm(assembler.Compile());
 		vm.run();
 
 		std::cout << "VM finished execution.\n";
 	}
-	catch (std::exception& ex) {
-		std::cerr << ex.what();
+	catch (const std::exception& ex) {
+		std::cerr << ex.what() << '\n';
 		return -1;
 	}
 

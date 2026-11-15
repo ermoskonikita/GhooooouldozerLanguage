@@ -18,7 +18,7 @@ class Parser{
 public:
 	Parser(std::vector<Token> t_vec);
 	void parse();
-	const std::vector<std::string>& getBytecode();
+	const std::vector<std::string>& getBytecode() const;
 private:
 	std::vector<Token> token_vec;
 	size_t pos = 0;

@@ -17,9 +17,6 @@ private:
 	int32_t read_int32();
 	void pop_two(int32_t& right, int32_t& left);
 public:
-	Virtual_Machine();
+	Virtual_Machine(std::vector<uint8_t> bc);
 	void run();
-	void reset();
-	void SetBytecode(const std::vector<uint8_t>& bc);
-	void SetBytecode(std::vector<uint8_t>&& bc);	
 };
