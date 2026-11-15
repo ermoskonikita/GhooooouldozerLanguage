@@ -58,7 +58,6 @@
 
 ### Инструкция по сборке
 
-```
 # 1. Клонирование репозитория
 ```bash
 git clone https://github.com/ermoskonikita/GhooooouldozerLanguage.git
