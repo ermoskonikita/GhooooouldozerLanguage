@@ -14,6 +14,15 @@ struct Symbol {
 	size_t address;
 };
 
+struct VarInfo {
+	size_t address;
+	bool is_local;
+};
+
+struct FuncInfo {
+	std::vector<SymbolType> param_types;
+};
+
 class Parser{
 public:
 	Parser(std::vector<Token> t_vec);
@@ -29,9 +38,21 @@ private:
 	std::vector<std::string>* target_bytecode;
 
 	std::unordered_map<std::string, Symbol> symbol_table;
+	std::unordered_map<std::string, Symbol> local_symbol_table;
+	std::unordered_map<std::string, FuncInfo> func_table;
+
 	size_t next_free_address = 0;
-	size_t getVar(const std::string& str, SymbolType t = SymbolType::Scalar);
-	size_t declare_or_getVar(const std::string& str, SymbolType t = SymbolType::Scalar);
+	size_t next_free_local_address = 0;
+	bool in_function = false;
+
+	VarInfo getVar(const std::string& str, SymbolType t = SymbolType::Scalar);
+	VarInfo declare_or_getVar(const std::string& str, SymbolType t = SymbolType::Scalar);
+
+	void emitLoad(const VarInfo& var);
+	void emitStore(const VarInfo& var);
+	void emitLoadIndex(const VarInfo& var);
+	void emitStoreIndex(const VarInfo& var);
+	void emitAlloc(const VarInfo& var);
 
 	size_t if_counter = 0;
 	size_t while_counter = 0;
@@ -53,6 +74,7 @@ private:
 	void parseStatement();
 	void parseBlock();
 	void parseFunctionDecl();
+	void collectFunctions();
 
 	std::string assignType(TokenType op);
 };

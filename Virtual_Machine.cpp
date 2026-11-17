@@ -21,6 +21,21 @@ void Virtual_Machine::pop_two(int32_t& right, int32_t& left) {
 	stack.pop_back();
 }
 
+int32_t& Virtual_Machine::get_var_slot(int32_t adr, bool is_local) {
+	if (is_local) {
+		if (adr < 0 || static_cast<size_t>(fp + adr) >= locals_stack.size()) {
+			throw std::runtime_error("Local variable address out of bounds!");
+		}
+		return locals_stack[fp + static_cast<size_t>(adr)];
+	}
+	else {
+		if (adr < 0 || static_cast<size_t>(adr) >= variables.size()) {
+			throw std::runtime_error("Variable address out of bounds!");
+		}
+		return variables[static_cast<size_t>(adr)];
+	}
+}
+
 Virtual_Machine::Virtual_Machine(std::vector<uint8_t> bc) : bytecode(std::move(bc)), variables(1024, 0) {}
 
 void Virtual_Machine::run() {
@@ -266,52 +281,48 @@ void Virtual_Machine::run() {
 			stack.pop_back();
 			break;
 		case OpCode::LOAD:
+		case OpCode::LOAD_LOCAL:
 		{
 			if (stack.empty()) {
 				throw std::runtime_error("Stack underflow on LOAD!");
 			}
 
 			int32_t adr = stack.back();
-			if (adr < 0 || static_cast<size_t>(adr) >= variables.size()) {
-				throw std::runtime_error("Variable address out of bounds on LOAD!");
-			}
 			stack.pop_back();
+			int32_t& val = get_var_slot(adr, code == OpCode::LOAD_LOCAL);
 
-			stack.push_back(variables[adr]);
+			stack.push_back(val);
 			break;
 		}
 		case OpCode::STORE:
+		case OpCode::STORE_LOCAL:
 		{
 			if (stack.size() < 2) {
 				throw std::runtime_error("Stack underflow on STORE!");
 			}
 
 			int32_t adr = stack.back();
-			if (adr < 0 || static_cast<size_t>(adr) >= variables.size()) {
-				throw std::runtime_error("Variable address out of bounds on STORE!");
-			}
 			stack.pop_back();
+			int32_t& val = get_var_slot(adr, code == OpCode::STORE_LOCAL);
 
-			variables[adr] = stack.back();
+			val = stack.back();
 			stack.pop_back();
 			break;
 		}
 		case OpCode::LOAD_INDEX:
+		case OpCode::LOAD_LOCAL_INDEX:
 		{
 			if (stack.size() < 2) {
 				throw std::runtime_error("Stack underflow on LOAD_INDEX!");
 			}
 
 			int32_t adr = stack.back();
-			if (adr < 0 || static_cast<size_t>(adr) >= variables.size()) {
-				throw std::runtime_error("Variable address out of bounds on LOAD_INDEX!");
-			}
 			stack.pop_back();
-
 			int32_t index = stack.back();
 			stack.pop_back();
 
-			int32_t heap_ptr = variables[adr];
+			int32_t heap_ptr = get_var_slot(adr, code == OpCode::LOAD_LOCAL_INDEX);
+
 			if (heap_ptr < 0 || static_cast<size_t>(heap_ptr) >= heap.size()) {
 				throw std::runtime_error("Invalid array pointer on LOAD_INDEX!");
 			}
@@ -325,21 +336,19 @@ void Virtual_Machine::run() {
 			break;
 		}
 		case OpCode::STORE_INDEX:
+		case OpCode::STORE_LOCAL_INDEX:
 		{
 			if (stack.size() < 3) {
 				throw std::runtime_error("Stack underflow on STORE_INDEX!");
 			}
 
 			int32_t adr = stack.back();
-			if (adr < 0 || static_cast<size_t>(adr) >= variables.size()) {
-				throw std::runtime_error("Variable address out of bounds on STORE_INDEX!");
-			}
 			stack.pop_back();
-
 			int32_t index = stack.back();
 			stack.pop_back();
 
-			int32_t heap_ptr = variables[adr];
+			int32_t heap_ptr = get_var_slot(adr, code == OpCode::STORE_LOCAL_INDEX);
+
 			if (heap_ptr < 0 || static_cast<size_t>(heap_ptr) >= heap.size()) {
 				throw std::runtime_error("Invalid array pointer on STORE_INDEX!");
 			}
@@ -355,16 +364,15 @@ void Virtual_Machine::run() {
 			break;
 		}
 		case OpCode::ALLOC:
+		case OpCode::ALLOC_LOCAL:
 		{
 			if (stack.size() < 2) {
 				throw std::runtime_error("Stack underflow on ALLOC!");
 			}
 
 			int32_t adr = stack.back();
-			if (adr < 0 || static_cast<size_t>(adr) >= variables.size()) {
-				throw std::runtime_error("Variable address out of bounds on ALLOC!");
-			}
 			stack.pop_back();
+			int32_t& slot = get_var_slot(adr, code == OpCode::ALLOC_LOCAL);
 
 			int32_t size = stack.back();
 			if (size < 0 || size > 10'000'000) {
@@ -385,8 +393,7 @@ void Virtual_Machine::run() {
 				throw std::runtime_error("VM Memory error on ALLOC!");
 			}
 
-			variables[adr] = static_cast<int32_t>(s32);
-
+			slot = static_cast<int32_t>(s32);
 			break;
 		}
 		case OpCode::CALL:
@@ -398,8 +405,11 @@ void Virtual_Machine::run() {
 			int64_t pointer = ip;
 			int32_t jmp = read_int32();
 
-			call_stack.push_back(static_cast<int32_t>(ip));
-			if (call_stack.size() >= 10000) throw std::runtime_error("Call stack overflow!");
+			if (call_stack.size() >= 10000) {
+				throw std::runtime_error("Call stack overflow!");
+			}
+			call_stack.push_back(CallFrame{ ip, fp });
+			fp = locals_stack.size();
 
 			pointer += jmp;
 			if (pointer < 0 || pointer >= static_cast<int64_t>(bytecode.size())) {
@@ -410,13 +420,44 @@ void Virtual_Machine::run() {
 			break;
 		}
 		case OpCode::RET:
+		{
 			if (call_stack.empty()) {
 				throw std::runtime_error("Call stack underflow on RET!");
 			}
 
-			ip = call_stack.back();
+			CallFrame frame = call_stack.back();
 			call_stack.pop_back();
+
+			if (fp > locals_stack.size()) {
+				throw std::runtime_error("Corrupted frame pointer on RET!");
+			}
+			locals_stack.resize(fp);
+
+			ip = frame.return_ip;
+			fp = frame.prev_fp;
+
 			break;
+		}
+		case OpCode::ENTER:
+		{
+			if (stack.empty()) {
+				throw std::runtime_error("Stack underflow on ENTER!");
+			}
+
+			int32_t l_counter = stack.back();
+			stack.pop_back();
+
+			if (l_counter < 0 || l_counter >= 10000) {
+				throw std::runtime_error("Invalid number of local_variables!");
+			}
+
+			if (locals_stack.size() + static_cast<size_t>(l_counter) >= 10'000'000) {
+				throw std::runtime_error("Locals stack overflow!");
+			}
+			locals_stack.resize(locals_stack.size() + static_cast<size_t>(l_counter), 0);
+
+			break;
+		}
 		case OpCode::SWAP:
 			if (stack.size() < 2) {
 				throw std::runtime_error("Stack underflow on SWAP!");

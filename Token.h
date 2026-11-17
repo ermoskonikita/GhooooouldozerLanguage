@@ -15,6 +15,7 @@ enum class TokenType {
 	LBracket,RBracket,
 	LBrace,RBrace,
 	Semicolon,
+	Comma,
 	Print,
 	Func,
 	Return,

@@ -47,7 +47,9 @@ std::vector<uint8_t> Assembler::Compile() {
 			str == "GE" || str == "EQ" || str == "NE" || str == "AND" || str == "OR" ||
 			str == "NOT" || str == "PRINT" || str == "PRINT_CHAR" || str == "RET" ||
 			str == "LOAD" || str == "STORE" || str == "LOAD_INDEX" || str == "STORE_INDEX" ||
-			str == "ALLOC" || str == "SWAP" || str == "SWAP3" || str == "HALT") position++;
+			str == "ALLOC" || str == "ENTER" || str == "LOAD_LOCAL" || str == "STORE_LOCAL" ||
+			str == "LOAD_LOCAL_INDEX" || str == "STORE_LOCAL_INDEX" ||str == "ALLOC_LOCAL" || 
+			str == "SWAP" || str == "SWAP3" || str == "HALT") position++;
 		else if (op_vector[i].back() == ':') {
 			std::string c{ op_vector[i].begin(),op_vector[i].end() - 1 };
 			if (cases.count(c)) {
@@ -148,6 +150,12 @@ std::vector<uint8_t> Assembler::Compile() {
 		else if (str == "LOAD_INDEX") { bytecode.push_back(static_cast<uint8_t>(OpCode::LOAD_INDEX)); position++; }
 		else if (str == "STORE_INDEX") { bytecode.push_back(static_cast<uint8_t>(OpCode::STORE_INDEX)); position++; }
 		else if (str == "ALLOC") { bytecode.push_back(static_cast<uint8_t>(OpCode::ALLOC)); position++; }
+		else if (str == "ENTER") { bytecode.push_back(static_cast<uint8_t>(OpCode::ENTER)); position++; }
+		else if (str == "LOAD_LOCAL") { bytecode.push_back(static_cast<uint8_t>(OpCode::LOAD_LOCAL)); position++; }
+		else if (str == "STORE_LOCAL") { bytecode.push_back(static_cast<uint8_t>(OpCode::STORE_LOCAL)); position++; }
+		else if (str == "LOAD_LOCAL_INDEX") { bytecode.push_back(static_cast<uint8_t>(OpCode::LOAD_LOCAL_INDEX)); position++; }
+		else if (str == "STORE_LOCAL_INDEX") { bytecode.push_back(static_cast<uint8_t>(OpCode::STORE_LOCAL_INDEX)); position++; }
+		else if (str == "ALLOC_LOCAL") { bytecode.push_back(static_cast<uint8_t>(OpCode::ALLOC_LOCAL)); position++; }
 		else if(str == "SWAP") { bytecode.push_back(static_cast<uint8_t>(OpCode::SWAP)); position++; }
 		else if (str == "SWAP3") { bytecode.push_back(static_cast<uint8_t>(OpCode::SWAP3)); position++; }
 		else if (str == "CALL") {

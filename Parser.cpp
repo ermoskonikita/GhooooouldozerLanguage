@@ -1,6 +1,7 @@
 #include "Parser.h"
 #include <stdexcept>
 #include <iostream>
+#include <unordered_set>
 
 Parser::Parser(std::vector<Token> t_vec) : token_vec(std::move(t_vec)),target_bytecode(&main_bytecode) {}
 
@@ -12,24 +13,90 @@ void Parser::expect(TokenType type, const std::string& error_msg) {
 	else throw std::runtime_error(error_msg);
 }
 
-size_t Parser::getVar(const std::string& str, SymbolType t) {
+VarInfo Parser::getVar(const std::string& str, SymbolType t) {
+	if (in_function) {
+		if (auto it = local_symbol_table.find(str); it != local_symbol_table.end()) {
+			if (it->second.type == t) return { it->second.address,true };
+			else throw std::runtime_error("Invalid variable type!");
+		}
+	}
+
 	if (auto it = symbol_table.find(str); it == symbol_table.end()) {
 		throw std::runtime_error("Undeclared variable!");
 	}
-	else if(it->second.type == t) return it->second.address;
+	else if (it->second.type == t) return { it->second.address,false };
 	throw std::runtime_error("Invalid variable type!");
 }
 
-size_t Parser::declare_or_getVar(const std::string& str, SymbolType t) {
-	auto it = symbol_table.find(str);
-	if (it == symbol_table.end()) {
+VarInfo Parser::declare_or_getVar(const std::string& str, SymbolType t) {
+	auto global_it = symbol_table.find(str);
+
+	if (in_function) {
+		if (t == SymbolType::Array) {
+			if (local_symbol_table.count(str)) {
+				throw std::runtime_error("Cannot redefine array!");
+			}
+			size_t addr = next_free_local_address++;
+			local_symbol_table.emplace(str, Symbol{ t,addr });
+			return { addr,true };
+		}
+
+		auto local_it = local_symbol_table.find(str);
+		if (local_it == local_symbol_table.end()) {
+			if (global_it != symbol_table.end() && global_it->second.type == t) {
+				return { global_it->second.address,false };
+			}
+			else if (global_it != symbol_table.end() && global_it->second.type != t) {
+				throw std::runtime_error("Invalid variable type!");
+			}
+			else {
+				size_t addr = next_free_local_address++;
+				local_symbol_table.emplace(str, Symbol{ t,addr });
+				return { addr,true };
+			}
+		}
+		else if (t == SymbolType::Scalar && local_it->second.type == t) return { local_it->second.address,true };
+		throw std::runtime_error("Invalid variable type!");
+	}
+
+	if (global_it == symbol_table.end()) {
 		size_t addr = next_free_address++;
 		symbol_table.emplace(str, Symbol{t,addr});
-		return addr;
+		return { addr,false };
 	}
-	else if (t == SymbolType::Scalar && it->second.type == t) return it->second.address;
-	else if (t == SymbolType::Array && it->second.type == t) throw std::runtime_error("Cannot redefine array!");
+	else if (t == SymbolType::Scalar && global_it->second.type == t) return { global_it->second.address,false };
+	else if (t == SymbolType::Array && global_it->second.type == t) throw std::runtime_error("Cannot redefine array!");
 	throw std::runtime_error("Invalid variable type!");
+}
+
+void Parser::emitLoad(const VarInfo& var) {
+	target_bytecode->push_back("PUSH " + std::to_string(var.address));
+	if(var.is_local) target_bytecode->push_back("LOAD_LOCAL");
+	else target_bytecode->push_back("LOAD");
+}
+
+void Parser::emitStore(const VarInfo& var) {
+	target_bytecode->push_back("PUSH " + std::to_string(var.address));
+	if (var.is_local) target_bytecode->push_back("STORE_LOCAL");
+	else target_bytecode->push_back("STORE");
+}
+
+void Parser::emitLoadIndex(const VarInfo& var) {
+	target_bytecode->push_back("PUSH " + std::to_string(var.address));
+	if (var.is_local) target_bytecode->push_back("LOAD_LOCAL_INDEX");
+	else target_bytecode->push_back("LOAD_INDEX");
+}
+
+void Parser::emitStoreIndex(const VarInfo& var) {
+	target_bytecode->push_back("PUSH " + std::to_string(var.address));
+	if (var.is_local) target_bytecode->push_back("STORE_LOCAL_INDEX");
+	else target_bytecode->push_back("STORE_INDEX");
+}
+
+void Parser::emitAlloc(const VarInfo& var) {
+	target_bytecode->push_back("PUSH " + std::to_string(var.address));
+	if (var.is_local) target_bytecode->push_back("ALLOC_LOCAL");
+	else target_bytecode->push_back("ALLOC");
 }
 
 void Parser::parseFactor() {
@@ -58,16 +125,14 @@ void Parser::parseFactor() {
 			advance();
 			if (current().type != TokenType::LBracket) {
 
-				size_t addr = getVar(id_name);
-				target_bytecode->push_back("PUSH " + std::to_string(addr));
-				target_bytecode->push_back("LOAD");
+				VarInfo var = getVar(id_name);
+				emitLoad(var);
 
 				target_bytecode->push_back(std::move(in_or_dePush));
 				target_bytecode->push_back("ADD");
 				target_bytecode->push_back("DUP");
 
-				target_bytecode->push_back("PUSH " + std::to_string(addr));
-				target_bytecode->push_back("STORE");
+				emitStore(var);
 			}
 			else {
 				advance();
@@ -77,17 +142,15 @@ void Parser::parseFactor() {
 
 				expect(TokenType::RBracket, "Expected ]!");
 
-				size_t addr = getVar(id_name, SymbolType::Array);
-				target_bytecode->push_back("PUSH " + std::to_string(addr));
-				target_bytecode->push_back("LOAD_INDEX");
+				VarInfo var = getVar(id_name,SymbolType::Array);
+				emitLoadIndex(var);
 
 				target_bytecode->push_back(std::move(in_or_dePush));
 				target_bytecode->push_back("ADD");
 				target_bytecode->push_back("DUP");
 				target_bytecode->push_back("SWAP3");
 
-				target_bytecode->push_back("PUSH " + std::to_string(addr));
-				target_bytecode->push_back("STORE_INDEX");
+				emitStoreIndex(var);
 			}
 		}
 		else if (pos + 2 >= token_vec.size()) throw std::runtime_error("Expected expression or semicolon!");
@@ -104,7 +167,30 @@ void Parser::parseFactor() {
 		TokenType cur_in_id = current().type;
 
 		if (cur_in_id == TokenType::LParen) {
+
+			auto it = func_table.find(id_name);
+			if (it == func_table.end()) {
+				throw std::runtime_error("Undeclared function!");
+			}
+
 			advance();
+
+			const auto& func_params = it->second.param_types;
+			size_t params_size = func_params.size();
+			for (size_t i = 0;i < params_size;i++) {
+				if (func_params[i] == SymbolType::Array) {
+					const std::string& arr_name = current().text;
+					expect(TokenType::Identifier, "Expected array name!");
+					VarInfo arr = getVar(arr_name, SymbolType::Array);
+					emitLoad(arr);
+				}
+				else {
+					parseAssign();
+				}
+
+				if (i + 1 < params_size) expect(TokenType::Comma, "Expected comma!");
+			}
+
 			expect(TokenType::RParen, "Expected )!");
 			target_bytecode->push_back("CALL " + id_name);
 		}
@@ -114,7 +200,7 @@ void Parser::parseFactor() {
 			parseAssign();
 			expect(TokenType::RBracket, "Expected ]!");
 
-			size_t addr = getVar(id_name, SymbolType::Array);
+			VarInfo var = getVar(id_name, SymbolType::Array);
 			if (current().type == TokenType::PlusPlus || current().type == TokenType::MinusMinus) {
 				target_bytecode->push_back("DUP");
 
@@ -124,8 +210,7 @@ void Parser::parseFactor() {
 
 				advance();
 
-				target_bytecode->push_back("PUSH " + std::to_string(addr));
-				target_bytecode->push_back("LOAD_INDEX");
+				emitLoadIndex(var);
 
 				target_bytecode->push_back("DUP");
 				target_bytecode->push_back(std::move(in_or_dePush));
@@ -134,12 +219,10 @@ void Parser::parseFactor() {
 				target_bytecode->push_back("SWAP");
 				target_bytecode->push_back("SWAP3");
 
-				target_bytecode->push_back("PUSH " + std::to_string(addr));
-				target_bytecode->push_back("STORE_INDEX");
+				emitStoreIndex(var);
 			}
 			else {
-				target_bytecode->push_back("PUSH " + std::to_string(addr));
-				target_bytecode->push_back("LOAD_INDEX");
+				emitLoadIndex(var);
 			}
 		}
 		else if (cur_in_id == TokenType::PlusPlus || cur_in_id == TokenType::MinusMinus) {
@@ -149,21 +232,18 @@ void Parser::parseFactor() {
 
 			advance();
 
-			size_t addr = getVar(id_name);
-			target_bytecode->push_back("PUSH " + std::to_string(addr));
-			target_bytecode->push_back("LOAD");
+			VarInfo var = getVar(id_name);
+			emitLoad(var);
 
 			target_bytecode->push_back("DUP");
 			target_bytecode->push_back(std::move(in_or_dePush));
 			target_bytecode->push_back("ADD");
 
-			target_bytecode->push_back("PUSH " + std::to_string(addr));
-			target_bytecode->push_back("STORE");
+			emitStore(var);
 		}
 		else {
-			size_t addr = getVar(id_name);
-			target_bytecode->push_back("PUSH " + std::to_string(addr));
-			target_bytecode->push_back("LOAD");
+			VarInfo var = getVar(id_name);
+			emitLoad(var);
 		}
 	}
 	else if (cur == TokenType::LParen) {
@@ -296,22 +376,21 @@ void Parser::parseAssign() {
 
 		if (op == TokenType::Assign) {
 			parseAssign();
-			size_t addr = declare_or_getVar(id_name);
+
+			VarInfo var = declare_or_getVar(id_name);
 			target_bytecode->push_back("DUP");
-			target_bytecode->push_back("PUSH " + std::to_string(addr));
-			target_bytecode->push_back("STORE");
+			
+			emitStore(var);
 		}
 		else {
-			size_t addr = getVar(id_name);
-			target_bytecode->push_back("PUSH " + std::to_string(addr));
-			target_bytecode->push_back("LOAD");
+			VarInfo var = getVar(id_name);
+			emitLoad(var);
 
 			parseAssign();
 			target_bytecode->push_back(assignType(op));
 			target_bytecode->push_back("DUP");
 
-			target_bytecode->push_back("PUSH " + std::to_string(addr));
-			target_bytecode->push_back("STORE");
+			emitStore(var);
 		}
 	}
 	else if (current().type == TokenType::Identifier && pos + 1 < token_vec.size() &&
@@ -340,9 +419,8 @@ void Parser::parseAssign() {
 
 			target_bytecode->insert(target_bytecode->end(), check_vector.begin(), check_vector.end());
 			
-			size_t addr = getVar(id_name, SymbolType::Array);
-			target_bytecode->push_back("PUSH " + std::to_string(addr));
-			target_bytecode->push_back("STORE_INDEX");
+			VarInfo var = getVar(id_name, SymbolType::Array);
+			emitStoreIndex(var);
 		}
 		else if (cur == TokenType::PlusAssign ||
 			cur == TokenType::MinusAssign ||
@@ -357,17 +435,15 @@ void Parser::parseAssign() {
 			target_bytecode->insert(target_bytecode->end(), check_vector.begin(), check_vector.end());
 			target_bytecode->push_back("DUP");
 
-			size_t addr = getVar(id_name, SymbolType::Array);
-			target_bytecode->push_back("PUSH " + std::to_string(addr));
-			target_bytecode->push_back("LOAD_INDEX");
+			VarInfo var = getVar(id_name, SymbolType::Array);
+			emitLoadIndex(var);
 
 			parseAssign();
 			target_bytecode->push_back(assignType(cur));
 			target_bytecode->push_back("DUP");
 			target_bytecode->push_back("SWAP3");
 
-			target_bytecode->push_back("PUSH " + std::to_string(addr));
-			target_bytecode->push_back("STORE_INDEX");
+			emitStoreIndex(var);
 		}
 		else {
 			pos = rollback_pos;
@@ -463,9 +539,8 @@ void Parser::parseStatement() {
 		expect(TokenType::RBracket, "Expected ]!");
 		expect(TokenType::Semicolon, "Expected semicolon!");
 
-		size_t addr = declare_or_getVar(id_name, SymbolType::Array);
-		target_bytecode->push_back("PUSH " + std::to_string(addr));
-		target_bytecode->push_back("ALLOC");
+		VarInfo var = declare_or_getVar(id_name, SymbolType::Array);
+		emitAlloc(var);
 	}
 	else {
 		parseAssign();
@@ -479,28 +554,102 @@ void Parser::parseBlock() {
 		parseStatement();
 }
 
+void Parser::collectFunctions() {
+	std::unordered_set<std::string> param_names;
+	while (current().type != TokenType::End) {
+
+		if (current().type == TokenType::Func) {
+			advance();
+			const std::string& func_name = current().text;
+			expect(TokenType::Identifier, "Expected function name!");
+
+			if (func_table.count(func_name)) throw std::runtime_error("Redefine function!");
+			expect(TokenType::LParen, "Expected (!");
+
+			std::vector<SymbolType> param_types;
+			TokenType cur = current().type;
+			while (cur == TokenType::Identifier || cur == TokenType::Array) {
+				if (cur == TokenType::Identifier) param_types.push_back(SymbolType::Scalar);
+				else {
+					param_types.push_back(SymbolType::Array);
+					advance();
+				}
+
+				if (param_names.count(current().text)) throw std::runtime_error("Redefine function parameter!");
+				param_names.insert(current().text);
+
+				expect(TokenType::Identifier, "Expected variable name!");
+				if (current().type == TokenType::RParen) break;
+				expect(TokenType::Comma, "Expected comma!");
+				cur = current().type;
+				if (cur != TokenType::Identifier && cur != TokenType::Array) {
+					throw std::runtime_error("Expected identifier or )!");
+				}
+			}
+			expect(TokenType::RParen, "Expected )!");
+
+			func_table.emplace(func_name, FuncInfo{ std::move(param_types)});
+			param_names.clear();
+		}
+		advance();
+	}
+	pos = 0;
+}
+
 void Parser::parseFunctionDecl() {
+	in_function = true;
+
 	advance();
 	const std::string& func_name = current().text;
+
 	expect(TokenType::Identifier, "Expected function name!");
 
 	target_bytecode = &func_bytecode;
 	target_bytecode->push_back(func_name + ':');
 
 	expect(TokenType::LParen, "Expected (!");
+
+	const auto& param_types = func_table.at(func_name).param_types;
+	size_t params_size = param_types.size();
+	for (size_t i = 0; i < params_size; i++) {
+		if (param_types[i] == SymbolType::Array) advance();
+
+		local_symbol_table.emplace(current().text, Symbol{ param_types[i], next_free_local_address++ });
+		advance();
+
+		if (i + 1 < param_types.size()) advance(); 
+	}
+
 	expect(TokenType::RParen, "Expected )!");
+
+	size_t counter_index = target_bytecode->size();
+	target_bytecode->push_back("PUSH 0");
+	target_bytecode->push_back("ENTER");
+
+	for (size_t i = params_size; i > 0; i--) {
+		emitStore(VarInfo{ i - 1,true });
+	}
+
 	expect(TokenType::LBrace, "Expected {!");
 	parseBlock();
 	expect(TokenType::RBrace, "Expected }!");
+	(*target_bytecode)[counter_index] = "PUSH " + 
+		std::to_string(next_free_local_address);
 
 	if (target_bytecode->empty() || target_bytecode->back() != "RET") {
 		target_bytecode->push_back("PUSH 0");
 		target_bytecode->push_back("RET");
 	}
 	target_bytecode = &main_bytecode;
+
+	next_free_local_address = 0;
+	local_symbol_table.clear();
+	in_function = false;
 }
 
 void Parser::parse() {
+	collectFunctions();
+
 	while (current().type != TokenType::End) {
 		if (current().type == TokenType::Func) parseFunctionDecl();
 		else parseStatement();

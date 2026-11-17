@@ -71,7 +71,7 @@ Token Lexer::GetNextToken() {
 
 		t.text += src.substr(start_pos, pos - start_pos);
 
-		if (pos == src.size()) throw std::runtime_error(std::string("Отсутствуют кавычки!"));
+		if (pos == src.size()) throw std::runtime_error(std::string("\" are missing!"));
 		else pos++;
 
 		t.type = TokenType::String;
@@ -209,8 +209,9 @@ Token Lexer::GetNextToken() {
 		case ']':t.type = TokenType::RBracket; break;
 		case '{':t.type = TokenType::LBrace; break;
 		case '}':t.type = TokenType::RBrace; break;
+		case ',':t.type = TokenType::Comma; break;
 		case ';':t.type = TokenType::Semicolon; break;
-		default: throw std::runtime_error(std::string("Неизвестный символ: ") + current); break;
+		default: throw std::runtime_error(std::string("Unknown symbol: ") + current); break;
 		}
 	}
 	
