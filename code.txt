@@ -1,3 +1,35 @@
-array arr[5];
+print "Enter array size: ";
+n = input;
+array a[n];
 
-print arr;
+i = 0;
+while (i < n) {
+	print "Enter array element[";
+	print i;
+	print "]: ";
+    a[i] = input;
+    i++;
+}
+
+print "Enter func parameter: ";
+res = process(a, n, input);
+print res;
+print "\n";
+
+print "Enter num to check pos or not: ";
+if (input > 0) {
+    print "POS\n";
+}
+else {
+    print "NONPOS\n";
+}
+
+func process(array arr, len, add_val) {
+    total = 0;
+    j = 0;
+    while (j < len) {
+        total += arr[j];
+        j++;
+    }
+    return total + add_val;
+}

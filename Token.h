@@ -17,6 +17,7 @@ enum class TokenType {
 	Semicolon,
 	Comma,
 	Print,
+	Input,
 	Func,
 	Return,
 	If,

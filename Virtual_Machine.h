@@ -25,6 +25,7 @@ private:
 
 	int32_t read_int32();
 	void pop_two(int32_t& right, int32_t& left);
+	int32_t input_num();
 	int32_t& get_var_slot(int32_t adr, bool is_local);
 public:
 	Virtual_Machine(std::vector<uint8_t> bc);

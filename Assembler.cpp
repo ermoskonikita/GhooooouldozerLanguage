@@ -42,14 +42,14 @@ std::vector<uint8_t> Assembler::Compile() {
 			i++;
 		}
 		else if (str == "POP" || str == "DUP" || str == "ADD" ||
-			str == "SUB" || str == "MUL" || str == "DIV" || str == "BAND" || str == "BOR" ||
+			str == "SUB" || str == "MUL" || str == "DIV" || str == "NEG" || str == "BAND" || str == "BOR" ||
 			str == "BXOR" || str == "BNOT" || str == "LT" ||str == "LE"  || str == "GT" ||
 			str == "GE" || str == "EQ" || str == "NE" || str == "AND" || str == "OR" ||
-			str == "NOT" || str == "PRINT" || str == "PRINT_CHAR" || str == "RET" ||
-			str == "LOAD" || str == "STORE" || str == "LOAD_INDEX" || str == "STORE_INDEX" ||
-			str == "ALLOC" || str == "ENTER" || str == "LOAD_LOCAL" || str == "STORE_LOCAL" ||
-			str == "LOAD_LOCAL_INDEX" || str == "STORE_LOCAL_INDEX" ||str == "ALLOC_LOCAL" || 
-			str == "SWAP" || str == "SWAP3" || str == "HALT") position++;
+			str == "NOT" || str == "PRINT" || str == "PRINT_CHAR" || str == "INPUT" || 
+			str == "RET" || str == "LOAD" || str == "STORE" || str == "LOAD_INDEX" ||
+			str == "STORE_INDEX" || str == "ALLOC" || str == "ENTER" || str == "LOAD_LOCAL" ||
+			str == "STORE_LOCAL" || str == "LOAD_LOCAL_INDEX" || str == "STORE_LOCAL_INDEX" ||
+			str == "ALLOC_LOCAL" || str == "SWAP" || str == "SWAP3" || str == "HALT") position++;
 		else if (op_vector[i].back() == ':') {
 			std::string c{ op_vector[i].begin(),op_vector[i].end() - 1 };
 			if (cases.count(c)) {
@@ -82,6 +82,7 @@ std::vector<uint8_t> Assembler::Compile() {
 		else if (str == "SUB") { bytecode.push_back(static_cast<uint8_t>(OpCode::SUB)); position++; }
 		else if (str == "MUL") { bytecode.push_back(static_cast<uint8_t>(OpCode::MUL)); position++; }
 		else if (str == "DIV") { bytecode.push_back(static_cast<uint8_t>(OpCode::DIV)); position++; }
+		else if (str == "NEG") { bytecode.push_back(static_cast<uint8_t>(OpCode::NEG)); position++; }
 		else if (str == "BAND") { bytecode.push_back(static_cast<uint8_t>(OpCode::BAND)); position++; }
 		else if (str == "BOR") { bytecode.push_back(static_cast<uint8_t>(OpCode::BOR)); position++; }
 		else if (str == "BXOR") { bytecode.push_back(static_cast<uint8_t>(OpCode::BXOR)); position++; }
@@ -145,6 +146,7 @@ std::vector<uint8_t> Assembler::Compile() {
 		}
 		else if (str == "PRINT") { bytecode.push_back(static_cast<uint8_t>(OpCode::PRINT)); position++; }
 		else if (str == "PRINT_CHAR") { bytecode.push_back(static_cast<uint8_t>(OpCode::PRINT_CHAR)); position++; }
+		else if (str == "INPUT") { bytecode.push_back(static_cast<uint8_t>(OpCode::INPUT)); position++; }
 		else if (str == "LOAD") { bytecode.push_back(static_cast<uint8_t>(OpCode::LOAD)); position++; } 
 		else if (str == "STORE") { bytecode.push_back(static_cast<uint8_t>(OpCode::STORE)); position++; }
 		else if (str == "LOAD_INDEX") { bytecode.push_back(static_cast<uint8_t>(OpCode::LOAD_INDEX)); position++; }

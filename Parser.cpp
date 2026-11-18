@@ -112,6 +112,15 @@ void Parser::parseFactor() {
 		parseFactor();
 		target_bytecode->push_back("BNOT");
 	}
+	else if (cur == TokenType::Minus) {
+		advance();
+		parseFactor();
+		target_bytecode->push_back("NEG");
+	}
+	else if (cur == TokenType::Input) {
+		advance();
+		target_bytecode->push_back("INPUT");
+	}
 	else if (cur == TokenType::PlusPlus || cur == TokenType::MinusMinus) {
 		std::string in_or_dePush;
 		if (cur == TokenType::PlusPlus) in_or_dePush = "PUSH 1";
@@ -658,10 +667,6 @@ void Parser::parse() {
 	main_bytecode.push_back("HALT");
 	final_bytecode = std::move(main_bytecode);
 	final_bytecode.insert(final_bytecode.end(), func_bytecode.begin(), func_bytecode.end());
-
-	//debug
-	std::cout << "Parser:\n";
-	for (const auto& str : final_bytecode) std::cout << str << '\n'; 
 }
 
 const std::vector<std::string>& Parser::getBytecode() const{

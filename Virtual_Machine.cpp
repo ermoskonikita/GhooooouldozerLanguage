@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <iostream>
 #include <stdexcept>
+#include <limits>
 
 int32_t Virtual_Machine::read_int32() {
 	int32_t arg = 0;
@@ -19,6 +20,35 @@ void Virtual_Machine::pop_two(int32_t& right, int32_t& left) {
 	stack.pop_back();
 	left = stack.back();
 	stack.pop_back();
+}
+
+int32_t Virtual_Machine::input_num() {
+	int32_t val;
+
+	do {
+		if (!(std::cin >> val)) {
+			if (std::cin.eof()) {
+				throw std::runtime_error("Unexpected end of input!");
+			}
+			std::cin.clear();
+			std::cin.ignore((std::numeric_limits<std::streamsize>::max)(), '\n');
+			std::cout << "Error input! Try again!\n";
+		}
+		else {
+			while (std::cin.peek() == ' ' || std::cin.peek() == '\t') {
+				std::cin.get();
+			}
+			if (std::cin.peek() != '\n' && std::cin.peek() != std::char_traits<char>::eof()) {
+				std::cin.ignore((std::numeric_limits<std::streamsize>::max)(), '\n');
+				std::cout << "Error input! Try again!\n";
+				continue;
+			}
+			std::cin.ignore((std::numeric_limits<std::streamsize>::max)(), '\n');
+			break;
+		}
+	} while (1);
+
+	return val;
 }
 
 int32_t& Virtual_Machine::get_var_slot(int32_t adr, bool is_local) {
@@ -139,6 +169,20 @@ void Virtual_Machine::run() {
 			}
 
 			stack.push_back(static_cast<int32_t>(div));
+			break;
+		}
+		case OpCode::NEG:
+		{
+			if (stack.empty()) {
+				throw std::runtime_error("Stack underflow on NEG!");
+			}
+
+			int32_t val = stack.back();
+			if (val == INT32_MIN) {
+				throw std::runtime_error("Overflow on NEG!");
+			}
+
+			stack.back() = -val;
 			break;
 		}
 		case OpCode::BAND:
@@ -280,6 +324,12 @@ void Virtual_Machine::run() {
 
 			stack.pop_back();
 			break;
+		case OpCode::INPUT:
+		{
+			int32_t val = input_num();
+			stack.push_back(val);
+			break;
+		}
 		case OpCode::LOAD:
 		case OpCode::LOAD_LOCAL:
 		{
