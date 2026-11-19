@@ -3,9 +3,9 @@
 
 enum class TokenType {
 	Number,
-	Plus,Minus,Star,Slash,
+	Plus,Minus,Star,Slash,Percent,
 	PlusPlus, MinusMinus,
-	Assign, PlusAssign, MinusAssign, StarAssign, SlashAssign,
+	Assign, PlusAssign, MinusAssign, StarAssign, SlashAssign, PercentAssign,
 	BAndAssign, BOrAssign, BXorAssign,
 	Less, Greater, Equal,
 	LessEqual, GreaterEqual, NotEqual,

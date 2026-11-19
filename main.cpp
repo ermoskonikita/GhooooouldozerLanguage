@@ -26,8 +26,6 @@ int main() {
 
 		Virtual_Machine vm(assembler.Compile());
 		vm.run();
-
-		std::cout << "VM finished execution.\n";
 	}
 	catch (const std::exception& ex) {
 		std::cerr << ex.what() << '\n';

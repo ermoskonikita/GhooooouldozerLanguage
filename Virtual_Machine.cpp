@@ -171,6 +171,25 @@ void Virtual_Machine::run() {
 			stack.push_back(static_cast<int32_t>(div));
 			break;
 		}
+		case OpCode::MOD:
+		{
+			if (stack.size() < 2) {
+				throw std::runtime_error("Stack underflow on MOD!");
+			}
+			if (stack.back() == 0) {
+				throw std::runtime_error("Division by zero!");
+			}
+
+			int32_t right, left;
+			pop_two(right, left);
+
+			if (left == INT32_MIN && right == -1) {
+				throw std::runtime_error("Overflow on MOD!");
+			}
+
+			stack.push_back(left % right);
+			break;
+		}
 		case OpCode::NEG:
 		{
 			if (stack.empty()) {

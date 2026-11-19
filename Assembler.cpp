@@ -42,8 +42,9 @@ std::vector<uint8_t> Assembler::Compile() {
 			i++;
 		}
 		else if (str == "POP" || str == "DUP" || str == "ADD" ||
-			str == "SUB" || str == "MUL" || str == "DIV" || str == "NEG" || str == "BAND" || str == "BOR" ||
-			str == "BXOR" || str == "BNOT" || str == "LT" ||str == "LE"  || str == "GT" ||
+			str == "SUB" || str == "MUL" || str == "DIV" || str == "MOD" || str == "NEG" ||
+			str == "BAND" || str == "BOR" || str == "BXOR" ||
+			str == "BNOT" || str == "LT" ||str == "LE"  || str == "GT" ||
 			str == "GE" || str == "EQ" || str == "NE" || str == "AND" || str == "OR" ||
 			str == "NOT" || str == "PRINT" || str == "PRINT_CHAR" || str == "INPUT" || 
 			str == "RET" || str == "LOAD" || str == "STORE" || str == "LOAD_INDEX" ||
@@ -82,6 +83,7 @@ std::vector<uint8_t> Assembler::Compile() {
 		else if (str == "SUB") { bytecode.push_back(static_cast<uint8_t>(OpCode::SUB)); position++; }
 		else if (str == "MUL") { bytecode.push_back(static_cast<uint8_t>(OpCode::MUL)); position++; }
 		else if (str == "DIV") { bytecode.push_back(static_cast<uint8_t>(OpCode::DIV)); position++; }
+		else if (str == "MOD") { bytecode.push_back(static_cast<uint8_t>(OpCode::MOD)); position++; }
 		else if (str == "NEG") { bytecode.push_back(static_cast<uint8_t>(OpCode::NEG)); position++; }
 		else if (str == "BAND") { bytecode.push_back(static_cast<uint8_t>(OpCode::BAND)); position++; }
 		else if (str == "BOR") { bytecode.push_back(static_cast<uint8_t>(OpCode::BOR)); position++; }

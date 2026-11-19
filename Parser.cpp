@@ -265,16 +265,21 @@ void Parser::parseFactor() {
 
 void Parser::parseTerm() {
 	parseFactor();
-	while (current().type == TokenType::Star || current().type == TokenType::Slash) {
-		TokenType cur = current().type;
+	TokenType cur = current().type;
+	while (cur == TokenType::Star || cur == TokenType::Slash || cur == TokenType::Percent) {
 		advance();
 		parseFactor();
 		if (cur == TokenType::Star) {
 			target_bytecode->push_back("MUL");
 		}
-		else {
+		else if(cur == TokenType::Slash) {
 			target_bytecode->push_back("DIV");
 		}
+		else {
+			target_bytecode->push_back("MOD");
+		}
+
+		cur = current().type;
 	}
 }
 
@@ -374,11 +379,12 @@ void Parser::parseAssign() {
 		token_vec[pos + 1].type == TokenType::MinusAssign || 
 		token_vec[pos + 1].type == TokenType::StarAssign ||
 		token_vec[pos + 1].type == TokenType::SlashAssign ||
+		token_vec[pos + 1].type == TokenType::PercentAssign ||
 		token_vec[pos + 1].type == TokenType::BAndAssign || 
 		token_vec[pos + 1].type == TokenType::BOrAssign || 
 		token_vec[pos + 1].type == TokenType::BXorAssign)) {
 
-		std::string id_name = current().text;
+		const std::string& id_name = current().text;
 		advance();
 		TokenType op = current().type;
 		advance();
@@ -410,7 +416,7 @@ void Parser::parseAssign() {
 		std::vector<std::string> check_vector;
 		target_bytecode = &check_vector;
 
-		std::string id_name = current().text;
+		const std::string& id_name = current().text;
 		advance();
 		advance();
 
@@ -435,6 +441,7 @@ void Parser::parseAssign() {
 			cur == TokenType::MinusAssign ||
 			cur == TokenType::StarAssign ||
 			cur == TokenType::SlashAssign ||
+			cur == TokenType::PercentAssign ||
 			cur == TokenType::BAndAssign ||
 			cur == TokenType::BOrAssign ||
 			cur == TokenType::BXorAssign ) {
@@ -683,6 +690,8 @@ std::string Parser::assignType(TokenType op) {
 		return "MUL";
 	case TokenType::SlashAssign:
 		return "DIV";
+	case TokenType::PercentAssign:
+		return "MOD";
 	case TokenType::BAndAssign:
 		return "BAND";
 	case TokenType::BOrAssign:

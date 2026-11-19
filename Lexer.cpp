@@ -129,6 +129,15 @@ Token Lexer::GetNextToken() {
 			else t.type = TokenType::Slash;
 			break;
 		}
+		case '%': {
+			if (pos < src.size() && src[pos] == '=') {
+				pos++;
+				t.text.push_back('=');
+				t.type = TokenType::PercentAssign;
+			}
+			else t.type = TokenType::Percent;
+			break;
+		}
 		case '=': {
 			if (pos < src.size() && src[pos] == '=') {
 				pos++;
