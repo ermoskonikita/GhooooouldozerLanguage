@@ -61,6 +61,8 @@ enum class OpCode : uint8_t {
 	PRINT_CHAR = 0x2A,
 	INPUT = 0x2B,
 
+	LEN = 0x2C,
+
 	// System
 	HALT = 0xFF
 };

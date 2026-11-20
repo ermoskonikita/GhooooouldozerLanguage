@@ -121,6 +121,17 @@ void Parser::parseFactor() {
 		advance();
 		target_bytecode->push_back("INPUT");
 	}
+	else if (cur == TokenType::Length) {
+		advance();
+		expect(TokenType::LParen, "Expected (!");
+		const std::string& id_name = current().text;
+		expect(TokenType::Identifier, "Expected variable name!");
+		expect(TokenType::RParen, "Expected )!");
+
+		VarInfo val = getVar(id_name, SymbolType::Array);
+		emitLoad(val);
+		target_bytecode->push_back("LEN");
+	}
 	else if (cur == TokenType::PlusPlus || cur == TokenType::MinusMinus) {
 		std::string in_or_dePush;
 		if (cur == TokenType::PlusPlus) in_or_dePush = "PUSH 1";
@@ -358,8 +369,13 @@ void Parser::parseAnd() {
 	parseBOr();
 	while (current().type == TokenType::And) {
 		advance();
+
+		std::string and_label = "and_label_" + std::to_string(label_counter++);
+		target_bytecode->push_back("DUP");
+		target_bytecode->push_back("JZ " + and_label);
 		parseBOr();
 		target_bytecode->push_back("AND");
+		target_bytecode->push_back(std::move(and_label) + ':');
 	}
 }
 
@@ -367,8 +383,15 @@ void Parser::parseOr() {
 	parseAnd();
 	while (current().type == TokenType::Or) {
 		advance();
+
+		std::string or_label = "or_label_" + std::to_string(label_counter++);
+		target_bytecode->push_back("DUP");
+		target_bytecode->push_back("JNZ " + or_label);
 		parseAnd();
 		target_bytecode->push_back("OR");
+		target_bytecode->push_back(std::move(or_label) + ':');
+		target_bytecode->push_back("NOT");
+		target_bytecode->push_back("NOT");
 	}
 }
 
@@ -494,6 +517,10 @@ void Parser::parseStatement() {
 		}
 	}
 	else if (cur == TokenType::Return) {
+		if (!in_function) {
+			throw std::runtime_error("Return outside of function!");
+		}
+
 		advance();
 		parseAssign();
 		expect(TokenType::Semicolon, "Expected semicolon!");

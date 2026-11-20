@@ -1,17 +1,43 @@
-n = input;
-array a[n];
+// 1. Защита от деления на ноль (ленивое отсечение)
+print (0 && (10 / 0)); print " ";
+print (1 || (10 / 0)); print " | ";
+
+// 2. Защита от выхода за границы массива при поиске
+array arr[3];
+arr[0] = 5;
+arr[1] = 10;
+arr[2] = 15;
 
 i = 0;
-while (i < n) {
-    a[i] = input;
+while (i < length(arr) && arr[i] != 99) {
     i++;
 }
+print i; print " ";
 
-i = 0;
-while (i < n) {
-    val = -a[i];
-    val %= 4;
-    print val;
-    print " ";
-    i++;
+if (i >= length(arr) || arr[i] == 0) {
+    print 1;
+} else {
+    print 0;
 }
+print " | ";
+
+// 3. Проверка отсутствия побочных эффектов в пропущенной ветке
+side_a = 0;
+side_b = 0;
+(0 && (side_a = 77));
+(1 || (side_b = 88));
+print side_a; print " ";
+print side_b; print " | ";
+
+// 4. Нормализация ненулевых значений в 0 или 1
+print (5 && 10); print " ";
+print (42 || 0); print " ";
+print (0 || 7); print " ";
+print (0 || 0); print " | ";
+
+// 5. Приоритет (&& выше ||) и цепочки
+// Если бы || был выше или равен &&, (1 || 1) && 0 дало бы 0;
+// при правильном приоритете 1 || (1 && 0) даёт 1:
+print (1 || 1 && 0); print " ";
+print (0 && 1 && (1 / 0)); print " ";
+print (0 || 5 || (1 / 0));

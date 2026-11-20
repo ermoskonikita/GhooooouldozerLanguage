@@ -8,6 +8,7 @@ Lexer::Lexer(std::string str) : src(std::move(str)),pos(0) {
 
 	keywords.emplace("print",TokenType::Print);
 	keywords.emplace("input", TokenType::Input);
+	keywords.emplace("length", TokenType::Length);
 	keywords.emplace("func",TokenType::Func);
 	keywords.emplace("return", TokenType::Return);
 	keywords.emplace("if", TokenType::If);

@@ -349,6 +349,22 @@ void Virtual_Machine::run() {
 			stack.push_back(val);
 			break;
 		}
+		case OpCode::LEN:
+		{
+			if (stack.empty()) {
+				throw std::runtime_error("Stack underflow on LEN!");
+			}
+
+			int32_t heap_ptr = stack.back();
+			stack.pop_back();
+
+			if (heap_ptr < 0 || static_cast<size_t>(heap_ptr) >= heap.size()) {
+				throw std::runtime_error("Invalid array pointer on LEN!");
+			}
+
+			stack.push_back(heap[heap_ptr]);
+			break;
+		}
 		case OpCode::LOAD:
 		case OpCode::LOAD_LOCAL:
 		{

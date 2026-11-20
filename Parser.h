@@ -54,6 +54,7 @@ private:
 	void emitStoreIndex(const VarInfo& var);
 	void emitAlloc(const VarInfo& var);
 
+	size_t label_counter = 0;
 	size_t if_counter = 0;
 	size_t while_counter = 0;
 
