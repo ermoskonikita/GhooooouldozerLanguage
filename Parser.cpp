@@ -534,24 +534,66 @@ void Parser::parseStatement() {
 
 		target_bytecode->push_back("JZ ");
 		size_t if_else_index = target_bytecode->size() - 1;
+		std::string if_number_to_str = std::to_string(if_counter++);
 
 		expect(TokenType::LBrace, "Expected {!");
 		parseBlock();
 		expect(TokenType::RBrace, "Expected }!");
 
-		std::string if_number_to_str = std::to_string(if_counter++);
 		target_bytecode->push_back("JMP end_if_" + if_number_to_str);
 
+		bool find_else = false;
+		bool find_else_if = false;
+		if (current().type == TokenType::Else && pos + 1 < token_vec.size() &&
+			token_vec[pos + 1].type == TokenType::If)  {
+			advance();
+
+			find_else_if = true;
+			size_t number_of_else_if = 0;
+			(*target_bytecode)[if_else_index] += ("else_if_" + if_number_to_str + "_0");
+
+			while (current().type == TokenType::If) {
+				advance();
+
+				std::string number_of_else_if_to_str = std::to_string(number_of_else_if++);
+				target_bytecode->push_back("else_if_" + if_number_to_str + '_' +
+					number_of_else_if_to_str + ':');
+
+				expect(TokenType::LParen, "Expected (!");
+				parseAssign();
+				expect(TokenType::RParen, "Expected )!");
+
+				target_bytecode->push_back("JZ end_else_if_" + if_number_to_str + '_' + number_of_else_if_to_str);
+
+				expect(TokenType::LBrace, "Expected {!");
+				parseBlock();
+				expect(TokenType::RBrace, "Expected }!");
+
+				target_bytecode->push_back("JMP end_if_" + if_number_to_str);
+
+				target_bytecode->push_back("end_else_if_" + if_number_to_str + '_' +
+					number_of_else_if_to_str + ':');
+
+				if (current().type == TokenType::Else && pos + 1 < token_vec.size() &&
+					token_vec[pos + 1].type == TokenType::If) {
+					advance();
+				}
+			}
+		}
 		if (current().type == TokenType::Else) {
-			(*target_bytecode)[if_else_index] += ("else_" + if_number_to_str);
+			advance();
+
+			find_else = true;
+			
+			if(!find_else_if) (*target_bytecode)[if_else_index] += ("else_" + if_number_to_str);
 
 			target_bytecode->push_back("else_" + if_number_to_str + ':');
-			advance();
 			expect(TokenType::LBrace, "Expected {!");
 			parseBlock();
 			expect(TokenType::RBrace, "Expected }!");
 		}
-		else (*target_bytecode)[if_else_index] += ("end_if_" + if_number_to_str);
+		
+		if(!find_else && !find_else_if) (*target_bytecode)[if_else_index] += ("end_if_" + if_number_to_str);
 
 		target_bytecode->push_back("end_if_" + std::move(if_number_to_str) + ':');
 	}
