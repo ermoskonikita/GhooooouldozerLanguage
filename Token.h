@@ -24,6 +24,7 @@ enum class TokenType {
 	If,
 	Else,
 	While,
+	Break,Continue,
 	Identifier,
 	Array,
 	String,

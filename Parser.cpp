@@ -600,8 +600,10 @@ void Parser::parseStatement() {
 	else if (cur == TokenType::While) {
 		advance();
 
+		while_stack.push_back(while_counter);
 		std::string while_number_to_str = std::to_string(while_counter++);
 		target_bytecode->push_back("while_" + while_number_to_str + ':');
+
 		expect(TokenType::LParen, "Expected (!");
 		parseAssign();
 		expect(TokenType::RParen, "Expected )!");
@@ -613,6 +615,26 @@ void Parser::parseStatement() {
 		target_bytecode->push_back("JMP while_" + while_number_to_str);
 
 		target_bytecode->push_back("end_while_" + std::move(while_number_to_str) + ':');
+
+		while_stack.pop_back();
+	}
+	else if (cur == TokenType::Break) {
+		if (while_stack.empty()) {
+			throw std::runtime_error("Break outside of while!");
+		}
+
+		advance();
+		target_bytecode->push_back("JMP end_while_" + std::to_string(while_stack.back()));
+		expect(TokenType::Semicolon, "Expected semicolon!");
+	}
+	else if (cur == TokenType::Continue) {
+		if (while_stack.empty()) {
+			throw std::runtime_error("Continue outside of while!");
+		}
+
+		advance();
+		target_bytecode->push_back("JMP while_" + std::to_string(while_stack.back()));
+		expect(TokenType::Semicolon, "Expected semicolon!");
 	}
 	else if (cur == TokenType::Array) {
 

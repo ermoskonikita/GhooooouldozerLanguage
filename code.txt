@@ -1,33 +1,32 @@
-func classify(n) {
-    if (n < 0) {
-        return -1;
-    } else if (n == 0) {
-        return 0;
-    } else if (n < 10) {
-        if (n == 7) {
-            return 777;
-        } else {
-            return 1;
+i = 0;
+while (i < 10) {
+    i++;
+    if (i % 2 == 0) {
+        continue;
+    }
+    if (i > 7) {
+        break;
+    }
+    print i;
+    print " ";
+}
+
+print "| ";
+
+outer = 0;
+total = 0;
+while (outer < 3) {
+    outer++;
+    inner = 0;
+    while (inner < 10) {
+        inner++;
+        if (inner == 2) {
+            continue;
         }
-    } else if (n < 100) {
-        return 2;
-    } else {
-        return 3;
+        if (inner == 5) {
+            break;
+        }
+        total += inner;
     }
 }
-
-print classify(-5); print " ";
-print classify(0); print " ";
-print classify(4); print " ";
-print classify(7); print " ";
-print classify(42); print " ";
-print classify(500); print " | ";
-
-x = 50;
-res = 0;
-if (x < 10) {
-    res = 1;
-} else if (x < 20) {
-    res = 2;
-}
-print res;
+print total;

@@ -56,7 +56,9 @@ private:
 
 	size_t label_counter = 0;
 	size_t if_counter = 0;
+
 	size_t while_counter = 0;
+	std::vector<size_t> while_stack;
 
 	const Token& current();
 	void advance();
