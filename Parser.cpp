@@ -600,40 +600,114 @@ void Parser::parseStatement() {
 	else if (cur == TokenType::While) {
 		advance();
 
-		while_stack.push_back(while_counter);
-		std::string while_number_to_str = std::to_string(while_counter++);
-		target_bytecode->push_back("while_" + while_number_to_str + ':');
+		std::string loop_number_to_str = std::to_string(loop_counter++);
+		std::string start_label = "while_" + loop_number_to_str;
+		std::string end_label = "end_while_" + std::move(loop_number_to_str);
+
+		loop_stack.push_back({ start_label,end_label });
+		target_bytecode->push_back(start_label + ':');
 
 		expect(TokenType::LParen, "Expected (!");
 		parseAssign();
 		expect(TokenType::RParen, "Expected )!");
-		target_bytecode->push_back("JZ end_while_" + while_number_to_str);
+		target_bytecode->push_back("JZ " + end_label);
 
 		expect(TokenType::LBrace, "Expected {!");
 		parseBlock();
 		expect(TokenType::RBrace, "Expected }!");
-		target_bytecode->push_back("JMP while_" + while_number_to_str);
+		target_bytecode->push_back("JMP " + std::move(start_label));
 
-		target_bytecode->push_back("end_while_" + std::move(while_number_to_str) + ':');
+		target_bytecode->push_back(std::move(end_label) + ':');
 
-		while_stack.pop_back();
+		loop_stack.pop_back();
+	}
+	else if (cur == TokenType::For) {
+		advance();
+
+		std::string loop_number_to_str = std::to_string(loop_counter++);
+		std::string start_label = "for_step_" + loop_number_to_str;
+		std::string end_label = "end_for_" + loop_number_to_str;
+
+		loop_stack.push_back({ start_label, end_label });
+
+		expect(TokenType::LParen, "Expected (!");
+
+		auto& active_table = in_function ? local_symbol_table : symbol_table;
+		std::string loop_var;
+		bool has_shadowed = false;
+		Symbol shadowed_var{};
+
+		if (current().type != TokenType::Semicolon) {
+			if (current().type == TokenType::Identifier &&
+				pos + 1 < token_vec.size() &&
+				token_vec[pos + 1].type == TokenType::Assign) {
+				loop_var = current().text;
+				if (auto it = active_table.find(loop_var); it != active_table.end()) {
+					has_shadowed = true;
+					shadowed_var = it->second;
+				}
+				size_t addr = in_function ? next_free_local_address++ : next_free_address++;
+				active_table[loop_var] = Symbol{ SymbolType::Scalar, addr };
+			}
+
+			parseAssign();
+			target_bytecode->push_back("POP");
+		}
+		expect(TokenType::Semicolon, "Expected semicolon!");
+
+		target_bytecode->push_back("for_cond_" + loop_number_to_str + ':');
+		if (current().type != TokenType::Semicolon) {
+			parseAssign();
+			target_bytecode->push_back("JZ " + end_label);
+		}
+		expect(TokenType::Semicolon, "Expected semicolon!");
+
+		std::vector<std::string>* copy_ptr = target_bytecode;
+		std::vector<std::string> for_step_vec;
+		target_bytecode = &for_step_vec;
+		target_bytecode->push_back(start_label + ':');
+		if (current().type != TokenType::RParen) {
+			parseAssign();
+			target_bytecode->push_back("POP");
+		}
+		expect(TokenType::RParen, "Expected )!");
+		target_bytecode = copy_ptr;
+
+		expect(TokenType::LBrace, "Expected {!");
+		parseBlock();
+		expect(TokenType::RBrace, "Expected }!");
+
+		target_bytecode->insert(target_bytecode->end(), for_step_vec.begin(), for_step_vec.end());
+		target_bytecode->push_back("JMP for_cond_" + std::move(loop_number_to_str));
+		target_bytecode->push_back(std::move(end_label) + ':');
+
+		if (!loop_var.empty()) {
+			if (has_shadowed) {
+				active_table[loop_var] = shadowed_var;
+			}
+			else {
+				active_table.erase(loop_var);
+			}
+		}
+
+		loop_stack.pop_back();
 	}
 	else if (cur == TokenType::Break) {
-		if (while_stack.empty()) {
+		if (loop_stack.empty()) {
 			throw std::runtime_error("Break outside of while!");
 		}
 
 		advance();
-		target_bytecode->push_back("JMP end_while_" + std::to_string(while_stack.back()));
+		target_bytecode->push_back("JMP " + loop_stack.back().break_label);
 		expect(TokenType::Semicolon, "Expected semicolon!");
 	}
 	else if (cur == TokenType::Continue) {
-		if (while_stack.empty()) {
+		if (loop_stack.empty()) {
 			throw std::runtime_error("Continue outside of while!");
 		}
 
 		advance();
-		target_bytecode->push_back("JMP while_" + std::to_string(while_stack.back()));
+		target_bytecode->push_back("JMP " + loop_stack.back().continue_label);
 		expect(TokenType::Semicolon, "Expected semicolon!");
 	}
 	else if (cur == TokenType::Array) {

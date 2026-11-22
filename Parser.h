@@ -23,6 +23,11 @@ struct FuncInfo {
 	std::vector<SymbolType> param_types;
 };
 
+struct LoopContext{
+	std::string continue_label;
+	std::string break_label;
+};
+
 class Parser{
 public:
 	Parser(std::vector<Token> t_vec);
@@ -57,8 +62,8 @@ private:
 	size_t label_counter = 0;
 	size_t if_counter = 0;
 
-	size_t while_counter = 0;
-	std::vector<size_t> while_stack;
+	size_t loop_counter = 0;
+	std::vector<LoopContext> loop_stack;
 
 	const Token& current();
 	void advance();

@@ -14,6 +14,7 @@ Lexer::Lexer(std::string str) : src(std::move(str)),pos(0) {
 	keywords.emplace("if", TokenType::If);
 	keywords.emplace("else", TokenType::Else);
 	keywords.emplace("while", TokenType::While);
+	keywords.emplace("for", TokenType::For);
 	keywords.emplace("break", TokenType::Break);
 	keywords.emplace("continue", TokenType::Continue);
 	keywords.emplace("array", TokenType::Array);

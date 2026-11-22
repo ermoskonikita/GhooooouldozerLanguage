@@ -1,10 +1,10 @@
-i = 0;
-while (i < 10) {
-    i++;
-    if (i % 2 == 0) {
+i = 100;
+
+for (i = 0; i < 5; i++) {
+    if (i == 1) {
         continue;
     }
-    if (i > 7) {
+    if (i == 4) {
         break;
     }
     print i;
@@ -12,21 +12,4 @@ while (i < 10) {
 }
 
 print "| ";
-
-outer = 0;
-total = 0;
-while (outer < 3) {
-    outer++;
-    inner = 0;
-    while (inner < 10) {
-        inner++;
-        if (inner == 2) {
-            continue;
-        }
-        if (inner == 5) {
-            break;
-        }
-        total += inner;
-    }
-}
-print total;
+print i;
