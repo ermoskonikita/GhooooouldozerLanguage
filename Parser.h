@@ -72,6 +72,7 @@ private:
 	void parseFactor();
 	void parseTerm();
 	void parseExpression();
+	void parseShift();
 	void parseComparison();
 	void parseBAnd();
 	void parseBXor();

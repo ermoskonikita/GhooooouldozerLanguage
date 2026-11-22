@@ -252,6 +252,38 @@ void Virtual_Machine::run() {
 			stack.push_back(~val);
 			break;
 		}
+		case OpCode::SHL:
+		{
+			if (stack.size() < 2) {
+				throw std::runtime_error("Stack underflow on SHL!");
+			}
+
+			int32_t right, left;
+			pop_two(right, left);
+
+			if (right < 0 || right >= 32) {
+				throw std::runtime_error("Shift count out of bounds on SHL!");
+			}
+
+			stack.push_back(static_cast<int32_t>(static_cast<uint32_t>(left) << right));
+			break;
+		}
+		case OpCode::SHR:
+		{
+			if (stack.size() < 2) {
+				throw std::runtime_error("Stack underflow on SHR!");
+			}
+
+			int32_t right, left;
+			pop_two(right, left);
+
+			if (right < 0 || right >= 32) {
+				throw std::runtime_error("Shift count out of bounds on SHR!");
+			}
+
+			stack.push_back(left >> right);
+			break;
+		}
 		case OpCode::LT:
 		case OpCode::LE:
 		case OpCode::GT:

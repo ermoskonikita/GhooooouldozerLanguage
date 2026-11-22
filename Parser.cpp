@@ -296,8 +296,8 @@ void Parser::parseTerm() {
 
 void Parser::parseExpression() {
 	parseTerm();
-	while (current().type == TokenType::Plus || current().type == TokenType::Minus) {
-		TokenType cur = current().type;
+	TokenType cur = current().type;
+	while (cur == TokenType::Plus || cur == TokenType::Minus) {
 		advance();
 		parseTerm();
 		if (cur == TokenType::Plus) {
@@ -306,17 +306,36 @@ void Parser::parseExpression() {
 		else {
 			target_bytecode->push_back("SUB");
 		}
+
+		cur = current().type;
+	}
+}
+
+void Parser::parseShift() {
+	parseExpression();
+	TokenType cur = current().type;
+	while (cur == TokenType::Shl || cur == TokenType::Shr) {
+		advance();
+		parseExpression();
+		if (cur == TokenType::Shl) {
+			target_bytecode->push_back("SHL");
+		}
+		else {
+			target_bytecode->push_back("SHR");
+		}
+
+		cur = current().type;
 	}
 }
 
 void Parser::parseComparison() {
-	parseExpression();
+	parseShift();
 	TokenType cur = current().type;
 	while (cur == TokenType::Less || cur == TokenType::Greater
 		  || cur == TokenType::Equal || cur == TokenType::LessEqual
 		  || cur == TokenType::GreaterEqual || cur == TokenType::NotEqual) {
 		advance();
-		parseExpression();
+		parseShift();
 		if (cur == TokenType::Less) {
 			target_bytecode->push_back("LT");
 		}
@@ -405,7 +424,9 @@ void Parser::parseAssign() {
 		token_vec[pos + 1].type == TokenType::PercentAssign ||
 		token_vec[pos + 1].type == TokenType::BAndAssign || 
 		token_vec[pos + 1].type == TokenType::BOrAssign || 
-		token_vec[pos + 1].type == TokenType::BXorAssign)) {
+		token_vec[pos + 1].type == TokenType::BXorAssign ||
+		token_vec[pos + 1].type == TokenType::ShlAssign ||
+		token_vec[pos + 1].type == TokenType::ShrAssign)) {
 
 		const std::string& id_name = current().text;
 		advance();
@@ -467,7 +488,9 @@ void Parser::parseAssign() {
 			cur == TokenType::PercentAssign ||
 			cur == TokenType::BAndAssign ||
 			cur == TokenType::BOrAssign ||
-			cur == TokenType::BXorAssign ) {
+			cur == TokenType::BXorAssign ||
+			cur == TokenType::ShlAssign || 
+			cur == TokenType::ShrAssign) {
 
 			advance();
 
@@ -631,25 +654,7 @@ void Parser::parseStatement() {
 		loop_stack.push_back({ start_label, end_label });
 
 		expect(TokenType::LParen, "Expected (!");
-
-		auto& active_table = in_function ? local_symbol_table : symbol_table;
-		std::string loop_var;
-		bool has_shadowed = false;
-		Symbol shadowed_var{};
-
 		if (current().type != TokenType::Semicolon) {
-			if (current().type == TokenType::Identifier &&
-				pos + 1 < token_vec.size() &&
-				token_vec[pos + 1].type == TokenType::Assign) {
-				loop_var = current().text;
-				if (auto it = active_table.find(loop_var); it != active_table.end()) {
-					has_shadowed = true;
-					shadowed_var = it->second;
-				}
-				size_t addr = in_function ? next_free_local_address++ : next_free_address++;
-				active_table[loop_var] = Symbol{ SymbolType::Scalar, addr };
-			}
-
 			parseAssign();
 			target_bytecode->push_back("POP");
 		}
@@ -680,15 +685,6 @@ void Parser::parseStatement() {
 		target_bytecode->insert(target_bytecode->end(), for_step_vec.begin(), for_step_vec.end());
 		target_bytecode->push_back("JMP for_cond_" + std::move(loop_number_to_str));
 		target_bytecode->push_back(std::move(end_label) + ':');
-
-		if (!loop_var.empty()) {
-			if (has_shadowed) {
-				active_table[loop_var] = shadowed_var;
-			}
-			else {
-				active_table.erase(loop_var);
-			}
-		}
 
 		loop_stack.pop_back();
 	}
@@ -863,6 +859,10 @@ std::string Parser::assignType(TokenType op) {
 		return "BOR";
 	case TokenType::BXorAssign:
 		return "BXOR";
+	case TokenType::ShlAssign:
+		return "SHL";
+	case TokenType::ShrAssign:
+		return "SHR";
 	default:
 		throw std::runtime_error("Unknown symbol!");
 	}

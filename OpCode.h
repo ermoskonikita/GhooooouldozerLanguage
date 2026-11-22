@@ -33,35 +33,36 @@ enum class OpCode : uint8_t {
 	BOR = 0x16,
 	BXOR = 0x17,
 	BNOT = 0x18,
+	SHL = 0x19,
+	SHR = 0x1A,
 
 	// Control flow & Functions
-	JMP = 0x19,
-	JZ = 0x1A,
-	JNZ = 0x1B,
-	CALL = 0x1C,
-	RET = 0x1D,
+	JMP = 0x1B,
+	JZ = 0x1C,
+	JNZ = 0x1D,
+	CALL = 0x1E,
+	RET = 0x1F,
 
 	// Global memory & Heap
-	LOAD = 0x1E,
-	STORE = 0x1F,
-	LOAD_INDEX = 0x20,
-	STORE_INDEX = 0x21,
-	ALLOC = 0x22,
+	LOAD = 0x20,
+	STORE = 0x21,
+	LOAD_INDEX = 0x22,
+	STORE_INDEX = 0x23,
+	ALLOC = 0x24,
 
 	// Local frame memory
-	ENTER = 0x23,
-	LOAD_LOCAL = 0x24,
-	STORE_LOCAL = 0x25,
-	LOAD_LOCAL_INDEX = 0x26,
-	STORE_LOCAL_INDEX = 0x27,
-	ALLOC_LOCAL = 0x28,
+	ENTER = 0x25,
+	LOAD_LOCAL = 0x26,
+	STORE_LOCAL = 0x27,
+	LOAD_LOCAL_INDEX = 0x28,
+	STORE_LOCAL_INDEX = 0x29,
+	ALLOC_LOCAL = 0x2A,
 
-	// I/O
-	PRINT = 0x29,
-	PRINT_CHAR = 0x2A,
-	INPUT = 0x2B,
-
-	LEN = 0x2C,
+	// I/O & Arrays
+	PRINT = 0x2B,
+	PRINT_CHAR = 0x2C,
+	INPUT = 0x2D,
+	LEN = 0x2E,
 
 	// System
 	HALT = 0xFF

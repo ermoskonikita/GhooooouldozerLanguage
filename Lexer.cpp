@@ -152,22 +152,48 @@ Token Lexer::GetNextToken() {
 			break;
 		}
 		case '<': {
-			if (pos < src.size() && src[pos] == '=') {
-				pos++;
-				t.text.push_back('=');
-				t.type = TokenType::LessEqual;
+			t.type = TokenType::Less;
+
+			if (pos < src.size()) {
+				if (src[pos] == '=') {
+					pos++;
+					t.text.push_back('=');
+					t.type = TokenType::LessEqual;
+				}
+				else if (src[pos] == '<') {
+					pos++;
+					t.text.push_back('<');
+					if (pos < src.size() && src[pos] == '=') {
+						pos++;
+						t.text.push_back('=');
+						t.type = TokenType::ShlAssign;
+					}
+					else t.type = TokenType::Shl;
+				}
 			}
-			else t.type = TokenType::Less;
 			break;
 		}
 		case '>':
 		{
-			if (pos < src.size() && src[pos] == '=') {
-				pos++;
-				t.text.push_back('=');
-				t.type = TokenType::GreaterEqual;
+			t.type = TokenType::Greater;
+
+			if (pos < src.size()) {
+				if (src[pos] == '=') {
+					pos++;
+					t.text.push_back('=');
+					t.type = TokenType::GreaterEqual;
+				}
+				else if (src[pos] == '>') {
+					pos++;
+					t.text.push_back('>');
+					if (pos < src.size() && src[pos] == '=') {
+						pos++;
+						t.text.push_back('=');
+						t.type = TokenType::ShrAssign;
+					}
+					else t.type = TokenType::Shr;
+				}
 			}
-			else t.type = TokenType::Greater;
 			break;
 		}
 		case '&': {

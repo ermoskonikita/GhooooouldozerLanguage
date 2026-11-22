@@ -44,7 +44,7 @@ std::vector<uint8_t> Assembler::Compile() {
 		else if (str == "POP" || str == "DUP" || str == "ADD" ||
 			str == "SUB" || str == "MUL" || str == "DIV" || str == "MOD" || str == "NEG" ||
 			str == "BAND" || str == "BOR" || str == "BXOR" ||
-			str == "BNOT" || str == "LT" ||str == "LE"  || str == "GT" ||
+			str == "BNOT" || str == "SHL" || str == "SHR" || str == "LT" || str == "LE" || str == "GT" ||
 			str == "GE" || str == "EQ" || str == "NE" || str == "AND" || str == "OR" ||
 			str == "NOT" || str == "PRINT" || str == "PRINT_CHAR" || str == "INPUT" ||
 			str == "LEN" || str == "RET" || str == "LOAD" || str == "STORE" || str == "LOAD_INDEX" ||
@@ -89,6 +89,8 @@ std::vector<uint8_t> Assembler::Compile() {
 		else if (str == "BOR") { bytecode.push_back(static_cast<uint8_t>(OpCode::BOR)); position++; }
 		else if (str == "BXOR") { bytecode.push_back(static_cast<uint8_t>(OpCode::BXOR)); position++; }
 		else if (str == "BNOT") { bytecode.push_back(static_cast<uint8_t>(OpCode::BNOT)); position++; }
+		else if (str == "SHL") { bytecode.push_back(static_cast<uint8_t>(OpCode::SHL)); position++; }
+		else if (str == "SHR") { bytecode.push_back(static_cast<uint8_t>(OpCode::SHR)); position++; }
 		else if (str == "LT") { bytecode.push_back(static_cast<uint8_t>(OpCode::LT)); position++; }
 		else if (str == "LE") { bytecode.push_back(static_cast<uint8_t>(OpCode::LE)); position++; }
 		else if (str == "GT") { bytecode.push_back(static_cast<uint8_t>(OpCode::GT)); position++; }
